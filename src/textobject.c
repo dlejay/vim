@@ -305,60 +305,48 @@ startPS(linenr_T lnum, int para, int both)
  * 0 - white space
  * 1 - punctuation
  * 2 or higher - keyword characters (letters, digits and underscore)
- *
- * UAX #29 Word Boundary Rules may refine these classifications further.
  */
 
 static int	cls_bigword;	// TRUE for "W", "B" or "E"
 
 /*
- * cls() -- returns the class of character at curwin->w_cursor
+ * cls() - returns the class of character at curwin->w_cursor
  *
  * If a 'W', 'B', or 'E' motion is being done (cls_bigword == TRUE), chars
  * from class 2 and higher are reported as class 1 since only white space
  * boundaries are of interest.
  */
-static int
+    static int
 cls(void)
 {
-    int	    c = 0;
-    int	    class = 0;
-    char_u  *line = NULL;
+    int	    c;
 
     c = gchar_cursor();
-
     if (c == ' ' || c == '\t' || c == NUL)
 	return 0;
-
     if (enc_dbcs != 0 && c > 0xFF)
     {
+	// If cls_bigword, report multi-byte chars as class 1.
 	if (enc_dbcs == DBCS_KOR && cls_bigword)
 	    return 1;
 
 	// process code leading/trailing bytes
 	return dbcs_class(((unsigned)c >> 8), (c & 0xFF));
     }
-
     if (enc_utf8)
     {
-	class = utf_class(c);	// utf_class() already uses 'iskeyword'
-	if (class != 0 && cls_bigword)
+	c = utf_class(c);
+	if (c != 0 && cls_bigword)
 	    return 1;
-	// Use the UAX #29 Word Boundary Rules, in case of punctuation
-	if (class == 1 && vim_strchr(p_cpo, CPO_NO_UAX29) == NULL)
-	{
-	    line = ml_get(curwin->w_cursor.lnum);
-	    class = wb_classify_punct(c, line, curwin->w_cursor.col);
-	}
-	return class;
+	return c;
     }
 
+    // If cls_bigword is TRUE, report all non-blanks as class 1.
     if (cls_bigword)
 	return 1;
 
     if (vim_iswordc(c))
 	return 2;
-
     return 1;
 }
 
