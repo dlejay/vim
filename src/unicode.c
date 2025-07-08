@@ -56,7 +56,7 @@ u_word_break_T
 unicode_get_word_break_property(codepoint_T c)
 {
     struct wb_interval WordBreakProperty[] = {
-#include "WordBreakProperty.inc"
+#include "unicode_word_break.inc"
     };
     int bot = 0;
     int top = ARRAY_LENGTH(WordBreakProperty) - 1;

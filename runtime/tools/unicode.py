@@ -108,7 +108,7 @@ def main():
     final = merge_intervals(filled)
 
     # Write out a .inc file for inclusion in unicode.c
-    outname = os.path.join(os.getcwd(), 'WordBreakProperty.inc')
+    outname = os.path.join(os.getcwd(), 'unicode_word_break.inc')
     with open(outname, 'w', encoding='utf-8') as out:
         out.write(generate_c_table(final))
     print(f"Wrote initializer list to {outname}")

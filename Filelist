@@ -31,6 +31,7 @@ SRC_ALL =	\
 		ci/pinned-pkgs \
 		src/Make_all.mak \
 		src/README.md \
+		src/unicode_word_break.inc \
 		src/alloc.c \
 		src/alloc.h \
 		src/arabic.c \
@@ -166,6 +167,8 @@ SRC_ALL =	\
 		src/typval.c \
 		src/ui.c \
 		src/undo.c \
+		src/unicode.c \
+		src/unicode.h \
 		src/usercmd.c \
 		src/userfunc.c \
 		src/version.c \
@@ -351,6 +354,7 @@ SRC_ALL =	\
 		src/proto/typval.pro \
 		src/proto/ui.pro \
 		src/proto/undo.pro \
+		src/proto/unicode.pro \
 		src/proto/usercmd.pro \
 		src/proto/userfunc.pro \
 		src/proto/version.pro \
