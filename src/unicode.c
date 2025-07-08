@@ -3,6 +3,9 @@
  *  unicode.c – functions related to the Unicode® Standard
  *
  *
+ *  created by: Damien Lejay
+ *
+ *
  *  Sections you will find in this file:
  *
  *	§ Unicode® Standard Annex #29 – UNICODE TEXT SEGMENTATION
@@ -29,54 +32,50 @@
  * =================================================================
  */
 
-// WordBreakProperty_Property_T is typedef'ed in unicode.h
+// codepoint_T and Word_Break_T are typedef'ed in unicode.h
 
 struct wb_interval
 {
-    unsigned int    first;
-    unsigned int    last;
-    Word_Break_T    wb;
+    codepoint_T first;
+    codepoint_T last;
+    u_word_break_T wb;
 };
 
 /*
- *  Table 3. WordBreakProperty Property Values
+ *  Returns the WordBreakProperty property of a Unicode character
+ *  by performing a binary search in an ordered list of invervals
+ *  which is built from:
  *
- *  Ordered list of intervals, for binary search.
+ *  WordBreakProperty-16.0.0.txt
  *
- *  Obtained from WordBreakProperty-16.0.0.txt
  *  thanks to ../runtime/tools/unicode.py
  *
  *  The table is too big and stays in its own file.
  */
-static const struct wb_interval WordBreakProperty[] =
+u_word_break_T
+unicode_get_word_break_property(codepoint_T c)
 {
+    struct wb_interval WordBreakProperty[] = {
 #include "WordBreakProperty.inc"
-};
-
-/*
- *  Returns the WordBreakProperty property of a Unicode character.
- */
-Word_Break_T
-unicode_get_word_break_value(int c)
-{
+    };
     int bot = 0;
     int top = ARRAY_LENGTH(WordBreakProperty) - 1;
     int mid = (bot + top) / 2;
 
     // Shortcut for Latin1 characters.
     if (c < 0x100)
-	top = 42;
+        top = 42;
 
     // binary search in table
     while (top >= bot)
     {
-	mid = (bot + top) / 2;
-	if (WordBreakProperty[mid].last < (unsigned int)c)
-	    bot = mid + 1;
-	else if (WordBreakProperty[mid].first > (unsigned int)c)
-	    top = mid - 1;
-	else
-	    return WordBreakProperty[mid].wb;
+        mid = (bot + top) / 2;
+        if (WordBreakProperty[mid].last < c)
+            bot = mid + 1;
+        else if (WordBreakProperty[mid].first > c)
+            top = mid - 1;
+        else
+            return WordBreakProperty[mid].wb;
     }
-    return WB_Other;
+    return U_WB_Other;
 }

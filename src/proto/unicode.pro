@@ -1,1 +1,1 @@
-Word_Break_T unicode_get_word_break_value(int c);
+u_word_break_T unicode_get_word_break_property(codepoint_T c);

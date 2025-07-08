@@ -33,7 +33,7 @@ def parse_wordbreak(lines):
             start_str = end_str = code_range
         start = int(start_str, 16)
         end = int(end_str, 16)
-        intervals.append((start, end, f"WB_{prop}"))
+        intervals.append((start, end, f"U_WB_{prop}"))
     return intervals
 
 
@@ -53,17 +53,17 @@ def fill_gaps(intervals, max_code=0x10FFFF):
     prev_end = -1
     for start, end, prop in intervals:
         if start > prev_end + 1:
-            filled.append((prev_end + 1, start - 1, 'WB_Other'))
+            filled.append((prev_end + 1, start - 1, 'U_WB_Other'))
         filled.append((start, end, prop))
         prev_end = end
     if prev_end < max_code:
-        filled.append((prev_end + 1, max_code, 'WB_Other'))
+        filled.append((prev_end + 1, max_code, 'U_WB_Other'))
     return filled
 
 
 def format_comment(start, end, prop):
     # Skip WB_Other and unnamed codepoints
-    if prop == 'WB_Other':
+    if prop == 'U_WB_Other':
         return ''
     try:
         name_start = unicodedata.name(chr(start))
