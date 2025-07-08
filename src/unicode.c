@@ -1,5 +1,5 @@
 /*
- * 
+ *
  *  unicode.c – functions related to the Unicode® Standard
  *
  *
@@ -12,8 +12,8 @@
  *
  */
 
-#include "vim.h"
-
+#include "unicode.h"
+#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 /*
  * =================================================================
  *
@@ -32,7 +32,7 @@
  * =================================================================
  */
 
-// codepoint_T and Word_Break_T are typedef'ed in unicode.h
+// codepoint_T and u_word_break_T are typedef'ed in unicode.h
 
 struct wb_interval
 {
@@ -42,11 +42,11 @@ struct wb_interval
 };
 
 /*
- *  Returns the WordBreakProperty property of a Unicode character
+ *  Returns the Word_Break property of a Unicode character
  *  by performing a binary search in an ordered list of invervals
  *  which is built from:
  *
- *  WordBreakProperty-16.0.0.txt
+ *  Word_Break-16.0.0.txt
  *
  *  thanks to ../runtime/tools/unicode.py
  *
@@ -55,27 +55,39 @@ struct wb_interval
 u_word_break_T
 unicode_get_word_break_property(codepoint_T c)
 {
-    struct wb_interval WordBreakProperty[] = {
+    struct wb_interval Word_Break[] = {
 #include "unicode_word_break.inc"
     };
     int bot = 0;
-    int top = ARRAY_LENGTH(WordBreakProperty) - 1;
+    int top = ARRAY_LENGTH(Word_Break) - 1;
     int mid = (bot + top) / 2;
 
-    // Shortcut for Latin1 characters.
-    if (c < 0x100)
-        top = 42;
+    // LCOV_EXCL_START
+    // Defensive check
+    if (c < 0 || c > 0x10ffff)
+        return U_WB_Other;
+    // LCOV_EXCL_STOP
 
     // binary search in table
     while (top >= bot)
     {
         mid = (bot + top) / 2;
-        if (WordBreakProperty[mid].last < c)
+        if (Word_Break[mid].last < c)
             bot = mid + 1;
-        else if (WordBreakProperty[mid].first > c)
+        else if (Word_Break[mid].first > c)
             top = mid - 1;
         else
-            return WordBreakProperty[mid].wb;
+            return Word_Break[mid].wb;
     }
     return U_WB_Other;
+}
+
+int
+unicode_is_w_seg_space(codepoint_T c)
+{
+    return c == 0x0020 ||  // SPACE
+           c == 0x1680 ||  // OGHAM SPACE MARK
+           (c >= 0x2000 && c <= 0x200A) ||  // EN QUAD .. HAIR SPACE
+           c == 0x205F ||  // MEDIUM MATHEMATICAL SPACE
+           c == 0x3000;    // IDEOGRAPHIC SPACE
 }
