@@ -133,19 +133,19 @@ unicode_get_word_break_property(rune_T r)
     // LCOV_EXCL_START
     // Defensive check
     if (r < 0 || r > 0x10ffff)
-        return U_WB_Other;
+	return U_WB_Other;
     // LCOV_EXCL_STOP
 
     // binary search in table
     while (top >= bot)
     {
-        mid = (bot + top) / 2;
-        if (Word_Break[mid].last < r)
-            bot = mid + 1;
-        else if (Word_Break[mid].first > r)
-            top = mid - 1;
-        else
-            return Word_Break[mid].wb;
+	mid = (bot + top) / 2;
+	if (Word_Break[mid].last < r)
+	    bot = mid + 1;
+	else if (Word_Break[mid].first > r)
+	    top = mid - 1;
+	else
+	    return Word_Break[mid].wb;
     }
     return U_WB_Other;
 }
@@ -154,8 +154,8 @@ bool
 unicode_is_w_seg_space(rune_T c)
 {
     return c == 0x0020 ||  // SPACE
-           c == 0x1680 ||  // OGHAM SPACE MARK
-           (c >= 0x2000 && c <= 0x200A) ||  // EN QUAD .. HAIR SPACE
-           c == 0x205F ||  // MEDIUM MATHEMATICAL SPACE
-           c == 0x3000;    // IDEOGRAPHIC SPACE
+	   c == 0x1680 ||  // OGHAM SPACE MARK
+	   (c >= 0x2000 && c <= 0x200A) ||  // EN QUAD .. HAIR SPACE
+	   c == 0x205F ||  // MEDIUM MATHEMATICAL SPACE
+	   c == 0x3000;    // IDEOGRAPHIC SPACE
 }

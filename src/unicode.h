@@ -5,8 +5,8 @@
 #ifndef VIM_UNICODE_H
 #define VIM_UNICODE_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 /*
  * ==========================================================================
@@ -25,14 +25,12 @@
  * ------------------------------------------------------------------------- */
 typedef int32_t rune_T;
 
-
 /* -------------------------------------------------------------------------
  *  unicode_is_combining ― true if r has Canonical_Combining_Class ≠ 0
  *
  *  Table source: UnicodeData.txt  → unicode_is_combining.inc
  * ------------------------------------------------------------------------- */
-bool
-unicode_is_combining(rune_T r);
+bool unicode_is_combining(rune_T r);
 
 /*
  * ==========================================================================
