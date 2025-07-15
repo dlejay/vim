@@ -796,6 +796,7 @@ OBJ = \
 	$(OUTDIR)\typval.obj \
 	$(OUTDIR)\ui.obj \
 	$(OUTDIR)\undo.obj \
+	$(OUTDIR)\unicode.obj \
 	$(OUTDIR)\usercmd.obj \
 	$(OUTDIR)\userfunc.obj \
 	$(OUTDIR)\vim9class.obj \
@@ -1807,6 +1808,8 @@ $(OUTDIR)/typval.obj:	$(OUTDIR) typval.c  $(INCL)
 $(OUTDIR)/ui.obj:	$(OUTDIR) ui.c  $(INCL)
 
 $(OUTDIR)/undo.obj:	$(OUTDIR) undo.c  $(INCL)
+
+$(OUTDIR)/unicode.obj:	$(OUTDIR) unicode.c  $(INCL)
 
 $(OUTDIR)/usercmd.obj:	$(OUTDIR) usercmd.c  $(INCL)
 
