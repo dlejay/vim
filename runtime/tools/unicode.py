@@ -11,6 +11,7 @@ WORD_BREAK_URL = (
 )
 
 # ─── Utility functions ───────────────────────────────────────────────────────
+
 def download_lines(url):
     """Fetch a URL and return its content as a list of lines."""
     with urllib.request.urlopen(url) as resp:
@@ -18,7 +19,7 @@ def download_lines(url):
 
 
 def make_intervals(cps):
-    """Merge sorted codepoints into (start, end) ranges."""
+    """Merge sorted codepoints into continuous (start, end) ranges."""
     intervals = []
     if not cps:
         return intervals
@@ -34,7 +35,7 @@ def make_intervals(cps):
 
 
 def format_range_comment(start, end):
-    """Describe a range by Unicode name(s); return empty if unavailable."""
+    """Return a comment describing the Unicode name(s) of the range, or empty if unavailable."""
     try:
         first = unicodedata.name(chr(start))
     except ValueError:
@@ -47,21 +48,20 @@ def format_range_comment(start, end):
         return ''
     return f"{first}..{last}"
 
-
-# ─── Combining-class table ──────────────────────────────────────────────────
+# ─── Combining marks table ───────────────────────────────────────────────────
 
 def parse_combining(lines):
-    """Extract codepoints whose combining class != 0."""
+    """Extract codepoints whose general category is Mark (Mn, Mc, or Me)."""
     return sorted(
         int(fields[0], 16)
         for ln in lines if ln and not ln.startswith('#')
         for fields in [ln.split(';')]
-        if fields[3] != '0'
+        if fields[2].startswith('M')
     )
 
 
 def generate_combining_inc(intervals, outname='unicode_is_combining.inc'):
-    """Write .inc file of {start,end} pairs with comments."""
+    """Write an .inc file of {start,end} pairs with optional comments."""
     entries = []
     for a, b in intervals:
         entry = f"    {{0x{a:X}, 0x{b:X}}},"
@@ -79,11 +79,10 @@ def generate_combining_inc(intervals, outname='unicode_is_combining.inc'):
         f.write('\n'.join(lines) + '\n')
     print(f"Wrote combining table to {outname}")
 
-
 # ─── Word-break property table ───────────────────────────────────────────────
 
 def parse_wordbreak(lines):
-    """Extract (start,end,property) triples from WordBreakProperty.txt."""
+    """Extract (start, end, property) triples from WordBreakProperty.txt."""
     intervals = []
     for ln in lines:
         ln = ln.strip()
@@ -97,7 +96,7 @@ def parse_wordbreak(lines):
 
 
 def merge_intervals(intervals):
-    """Merge contiguous intervals having identical property."""
+    """Merge contiguous intervals that share the same property."""
     merged = []
     for start, end, prop in sorted(intervals, key=lambda x: x[0]):
         if merged and merged[-1][2] == prop and start <= merged[-1][1] + 1:
@@ -108,7 +107,7 @@ def merge_intervals(intervals):
 
 
 def fill_gaps(intervals, max_code=0x10FFFF):
-    """Insert 'Other' spans where no property was defined."""
+    """Insert 'Other' spans where no property is defined."""
     filled, prev_end = [], -1
     for start, end, prop in intervals:
         if start > prev_end + 1:
@@ -121,7 +120,7 @@ def fill_gaps(intervals, max_code=0x10FFFF):
 
 
 def generate_wordbreak_inc(intervals, outname='unicode_word_break.inc'):
-    """Write .inc file of {start,end,prop} entries with comments."""
+    """Write an .inc file of {start,end,prop} entries with optional comments."""
     entries = []
     for a, b, p in intervals:
         entry = f"    {{0x{a:X}, 0x{b:X}, {p}}},"
@@ -139,21 +138,23 @@ def generate_wordbreak_inc(intervals, outname='unicode_word_break.inc'):
         f.write('\n'.join(lines) + '\n')
     print(f"Wrote word-break table to {outname}")
 
+# ─── Main entry point ────────────────────────────────────────────────────────
 
-# ─── Main ────────────────────────────────────────────────────────────────────
 def main():
-    # Combining-class
-    ucd = download_lines(COMBINING_URL)
-    cps = parse_combining(ucd)
-    generate_combining_inc(make_intervals(cps))
+    # Generate combining marks table
+    ucd_lines = download_lines(COMBINING_URL)
+    cps = parse_combining(ucd_lines)
+    combined_intervals = make_intervals(cps)
+    generate_combining_inc(combined_intervals)
 
-    # Word-break
-    wb = download_lines(WORD_BREAK_URL)
-    wb_int = parse_wordbreak(wb)
-    merged = merge_intervals(wb_int)
+    # Generate word-break property table
+    wb_lines = download_lines(WORD_BREAK_URL)
+    wb_intervals = parse_wordbreak(wb_lines)
+    merged = merge_intervals(wb_intervals)
     filled = fill_gaps(merged)
-    generate_wordbreak_inc(merged := merge_intervals(filled))
-
+    final_intervals = merge_intervals(filled)
+    generate_wordbreak_inc(final_intervals)
 
 if __name__ == '__main__':
     main()
+
