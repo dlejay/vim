@@ -6619,7 +6619,7 @@ gui_mch_draw_string(
 		unicodebuf[wlen++] = c;
 	    }
 
-	    if (unicode_is_combiningc))
+	    if (unicode_is_combining(c))
 		cw = 0;
 	    else
 	    {
