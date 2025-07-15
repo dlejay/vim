@@ -241,6 +241,9 @@
 #define HASLOOKBH	0x10	// Contains "\@<=" or "\@<!".
 #define WORST		0	// Worst case.
 
+// Included header
+#include "unicode.h"
+
 static int	num_complex_braces; // Complex \{...} count
 static char_u	*regcode;	// Code-emit pointer, or JUST_CALC_SIZE
 static long	regsize;	// Code size.
@@ -492,7 +495,7 @@ use_multibytecode(int c)
 {
     return has_mbyte && (*mb_char2len)(c) > 1
 		     && (re_multi_type(peekchr()) != NOT_MULTI
-			     || (enc_utf8 && utf_iscomposing(c)));
+			     || (enc_utf8 && unicode_is_combining(c)));
 }
 
 /*
@@ -1334,7 +1337,7 @@ regatom(int *flagp)
 
 	// When '.' is followed by a composing char ignore the dot, so that
 	// the composing char is matched here.
-	if (enc_utf8 && c == Magic('.') && utf_iscomposing(peekchr()))
+	if (enc_utf8 && c == Magic('.') && unicode_is_combining(peekchr()))
 	{
 	    c = getchr();
 	    goto do_multibyte;
@@ -3806,7 +3809,7 @@ regmatch(
 		}
 		if (enc_utf8)
 		    opndc = utf_ptr2char(opnd);
-		if (enc_utf8 && utf_iscomposing(opndc))
+		if (enc_utf8 && unicode_is_combining(opndc))
 		{
 		    // When only a composing char is given match at any
 		    // position where that composing char appears.
@@ -3815,7 +3818,7 @@ regmatch(
 						i += utf_ptr2len(rex.input + i))
 		    {
 			inpc = utf_ptr2char(rex.input + i);
-			if (!utf_iscomposing(inpc))
+			if (!unicode_is_combining(inpc))
 			{
 			    if (i > 0)
 				break;
@@ -3853,7 +3856,7 @@ regmatch(
 	    if (enc_utf8)
 	    {
 		// Skip composing characters.
-		while (utf_iscomposing(utf_ptr2char(rex.input)))
+		while (unicode_is_combining(utf_ptr2char(rex.input)))
 		    MB_CPTR_ADV(rex.input);
 	    }
 	    break;

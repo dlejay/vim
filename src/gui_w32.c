@@ -23,6 +23,7 @@
  * e.g., replace LONG with LONG_PTR, etc.
  */
 
+#include "unicode.h"
 #include "vim.h"
 
 #if defined(FEAT_DIRECTX)
@@ -6618,7 +6619,7 @@ gui_mch_draw_string(
 		unicodebuf[wlen++] = c;
 	    }
 
-	    if (utf_iscomposing(c))
+	    if (unicode_is_combiningc))
 		cw = 0;
 	    else
 	    {

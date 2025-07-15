@@ -11,6 +11,7 @@
  * edit.c: functions for Insert mode
  */
 
+#include "unicode.h"
 #include "vim.h"
 
 #define BACKSPACE_CHAR		    1
@@ -3222,7 +3223,7 @@ mb_replace_pop_ins(int cc)
 	    buf[0] = c;
 	    for (i = 1; i < n; ++i)
 		buf[i] = replace_pop();
-	    if (utf_iscomposing(utf_ptr2char(buf)))
+	    if (unicode_is_combining(utf_ptr2char(buf)))
 		ins_bytes_len(buf, n);
 	    else
 	    {

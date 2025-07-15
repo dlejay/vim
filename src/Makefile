@@ -1590,6 +1590,7 @@ BASIC_SRC = \
 	typval.c \
 	ui.c \
 	undo.c \
+	unicode.c \
 	usercmd.c \
 	userfunc.c \
 	version.c \
@@ -1763,6 +1764,7 @@ OBJ_COMMON = \
 	objects/typval.o \
 	objects/ui.o \
 	objects/undo.o \
+	objects/unicode.o \
 	objects/usercmd.o \
 	objects/userfunc.o \
 	objects/version.o \
@@ -3605,6 +3607,9 @@ objects/ui.o: ui.c
 
 objects/undo.o: undo.c
 	$(CCC) -o $@ undo.c
+
+objects/unicode.o: unicode.c
+	$(CCC) -o $@ unicode.c
 
 objects/usercmd.o: usercmd.c
 	$(CCC) -o $@ usercmd.c

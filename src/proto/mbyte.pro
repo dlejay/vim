@@ -38,7 +38,6 @@ int utfc_ptr2len_len(char_u *p, int size);
 int utf_char2len(int c);
 int utf_char2bytes(int c, char_u *buf);
 int utf_iscomposing_uint(UINT32_T c);
-int utf_iscomposing(int c);
 int utf_printable(int c);
 int utf_class(int c);
 int utf_class_buf(int c, buf_T *buf);

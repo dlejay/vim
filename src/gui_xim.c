@@ -11,6 +11,7 @@
  * gui_xim.c: functions for the X Input Method
  */
 
+#include "unicode.h"
 #include "vim.h"
 
 #if !defined(GTK_CHECK_VERSION)
@@ -749,7 +750,7 @@ im_preedit_changed_cb(GtkIMContext *context, gpointer data UNUSED)
 	    int is_composing;
 
 	    is_composing = ((*p & 0x80) != 0
-					  && utf_iscomposing(utf_ptr2char(p)));
+					  && unicode_is_combining(utf_ptr2char(p)));
 	    // These offsets are used as counters when generating <BS> and
 	    // <Del> to delete the preedit string.  So don't count composing
 	    // characters unless 'delcombine' is enabled.

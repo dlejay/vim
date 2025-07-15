@@ -11,6 +11,7 @@
  * ex_cmds.c: some functions for command line commands
  */
 
+#include "unicode.h"
 #include "vim.h"
 #include "version.h"
 
@@ -96,7 +97,7 @@ do_ascii(exarg_T *eap UNUSED)
 	if (len > 0)
 	    IObuff[len++] = ' ';
 	IObuff[len++] = '<';
-	if (enc_utf8 && utf_iscomposing(c)
+	if (enc_utf8 && unicode_is_combining(c)
 #ifdef USE_GUI
 		&& !gui.in_use
 #endif

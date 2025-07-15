@@ -12,6 +12,7 @@
  *		the operators.
  */
 
+#include "unicode.h"
 #include "vim.h"
 
 static int	VIsual_mode_orig = NUL;		// saved Visual mode
@@ -558,7 +559,7 @@ normal_cmd_get_more_chars(
 		    && (c >= 0x100 || MB_BYTE2LEN(vpeekc()) > 1))
 	    {
 		c = plain_vgetc();
-		if (!utf_iscomposing(c))
+		if (!unicode_is_combining(c))
 		{
 		    vungetc(c);		// it wasn't, put it back
 		    break;

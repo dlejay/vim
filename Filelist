@@ -31,7 +31,6 @@ SRC_ALL =	\
 		ci/pinned-pkgs \
 		src/Make_all.mak \
 		src/README.md \
-		src/unicode_word_break.inc \
 		src/alloc.c \
 		src/alloc.h \
 		src/arabic.c \
@@ -169,6 +168,8 @@ SRC_ALL =	\
 		src/undo.c \
 		src/unicode.c \
 		src/unicode.h \
+		src/unicode_is_combining.inc
+		src/unicode_word_break.inc \
 		src/usercmd.c \
 		src/userfunc.c \
 		src/version.c \

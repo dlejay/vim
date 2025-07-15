@@ -13,6 +13,7 @@
  * lower level.
  */
 
+#include "unicode.h"
 #include "vim.h"
 
 #ifdef FEAT_SYN_HL
@@ -2806,7 +2807,7 @@ win_line(
 
 			// At start of the line we can have a composing char.
 			// Draw it as a space with a composing char.
-			if (utf_iscomposing(mb_c))
+			if (unicode_is_combining(mb_c))
 			{
 			    int i;
 

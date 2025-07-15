@@ -11,12 +11,13 @@
  * textformat.c: text formatting functions
  */
 
+#include "unicode.h"
 #include "vim.h"
 
 static int	did_add_space = FALSE;	// auto_format() added an extra space
 					// under the cursor
 
-#define WHITECHAR(cc) (VIM_ISWHITE(cc) && (!enc_utf8 || !utf_iscomposing(utf_ptr2char(ml_get_cursor() + 1))))
+#define WHITECHAR(cc) (VIM_ISWHITE(cc) && (!enc_utf8 || !unicode_is_combining(utf_ptr2char(ml_get_cursor() + 1))))
 
 /*
  * Return TRUE if format option 'x' is in effect.
