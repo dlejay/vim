@@ -14,7 +14,8 @@
  */
 
 #include "unicode.h"
-#include "vim.h"
+#include <stddef.h>
+
 /*
  * =================================================================
  *
@@ -126,9 +127,7 @@ unicode_get_word_break_property(rune_T r)
     struct wb_interval Word_Break[] = {
 #include "unicode_word_break.inc"
     };
-    int bot = 0;
-    int top = ARRAY_LENGTH(Word_Break) - 1;
-    int mid = (bot + top) / 2;
+    size_t bot = 0, top = 0, mid = 0;
 
     // LCOV_EXCL_START
     // Defensive check
@@ -137,6 +136,7 @@ unicode_get_word_break_property(rune_T r)
     // LCOV_EXCL_STOP
 
     // binary search in table
+    top = sizeof(Word_Break) / sizeof(struct wb_interval) - 1;
     while (top >= bot)
     {
 	mid = (bot + top) / 2;
