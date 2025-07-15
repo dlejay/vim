@@ -168,7 +168,7 @@ SRC_ALL =	\
 		src/undo.c \
 		src/unicode.c \
 		src/unicode.h \
-		src/unicode_is_combining.inc
+		src/unicode_is_combining.inc \
 		src/unicode_word_break.inc \
 		src/usercmd.c \
 		src/userfunc.c \
