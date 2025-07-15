@@ -355,7 +355,6 @@ SRC_ALL =	\
 		src/proto/typval.pro \
 		src/proto/ui.pro \
 		src/proto/undo.pro \
-		src/proto/unicode.pro \
 		src/proto/usercmd.pro \
 		src/proto/userfunc.pro \
 		src/proto/version.pro \
