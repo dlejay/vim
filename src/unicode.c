@@ -88,6 +88,25 @@ unicode_is_combining(rune_T r)
 /*
  * =================================================================
  *
+ *		    Unicode® 16.0.0 Standard Annex #11
+ *
+ *			EAST ASIAN WIDTH
+ *
+ * =================================================================
+ */
+bool
+unicode_is_eastasian_ambiguous(rune_T r)
+{
+    struct interval eastasian_ambiguous[] = {
+	#include "tables/unicode_eastasian_ambiguous.inc"
+    };
+
+    return in_table(eastasian_ambiguous, sizeof(eastasian_ambiguous), r);
+}
+
+/*
+ * =================================================================
+ *
  *		    Unicode® 16.0.0 Standard Annex #29
  *
  *	    U N I C O D E  T E X T  S E G M E N T A T I O N

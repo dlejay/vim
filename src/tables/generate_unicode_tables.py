@@ -9,17 +9,14 @@ WORD_BREAK_URL = (
     'https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/'
     'WordBreakProperty.txt'
 )
+EAW_URL = 'https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt'
 
 # ─── Utility functions ───────────────────────────────────────────────────────
-
 def download_lines(url):
-    """Fetch a URL and return its content as a list of lines."""
     with urllib.request.urlopen(url) as resp:
         return resp.read().decode('utf-8').splitlines()
 
-
 def make_intervals(cps):
-    """Merge sorted codepoints into continuous (start, end) ranges."""
     intervals = []
     if not cps:
         return intervals
@@ -33,9 +30,7 @@ def make_intervals(cps):
     intervals.append((start, prev))
     return intervals
 
-
 def format_range_comment(start, end):
-    """Return a comment describing the Unicode name(s) of the range, or empty if unavailable."""
     try:
         first = unicodedata.name(chr(start))
     except ValueError:
@@ -49,9 +44,7 @@ def format_range_comment(start, end):
     return f"{first}..{last}"
 
 # ─── Combining marks table ───────────────────────────────────────────────────
-
 def parse_combining(lines):
-    """Extract codepoints whose general category is Mark (Mn, Mc, or Me)."""
     return sorted(
         int(fields[0], 16)
         for ln in lines if ln and not ln.startswith('#')
@@ -59,30 +52,24 @@ def parse_combining(lines):
         if fields[2].startswith('M')
     )
 
-
 def generate_combining_inc(intervals, outname='unicode_combining.inc'):
-    """Write an .inc file of {start,end} pairs with optional comments."""
     entries = []
     for a, b in intervals:
-        entry = f"    {{0x{a:X}, 0x{b:X}}},"
+        entry   = f"    {{0x{a:X}, 0x{b:X}}},"
         comment = format_range_comment(a, b)
         entries.append((entry, comment))
-
     width = max(len(e) for e, _ in entries)
-    lines = ['// Auto-generated combining-mark ranges; do not edit']
+    lines = ['/* Auto-generated combining-mark ranges from UnicodeData.txt; do not edit */']
     for e, c in entries:
-        pad = ' ' * (width - len(e) + 1) if c else ''
-        suffix = f"// {c}" if c else ''
+        pad    = ' ' * (width - len(e) + 1) if c else ''
+        suffix = f"  /* {c} */" if c else ''
         lines.append(f"{e}{pad}{suffix}")
-
     with open(outname, 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines) + '\n')
     print(f"Wrote combining table to {outname}")
 
 # ─── Word-break property table ───────────────────────────────────────────────
-
 def parse_wordbreak(lines):
-    """Extract (start, end, property) triples from WordBreakProperty.txt."""
     intervals = []
     for ln in lines:
         ln = ln.strip()
@@ -94,9 +81,7 @@ def parse_wordbreak(lines):
         intervals.append((start, end, f"U_WB_{prop.strip()}"))
     return intervals
 
-
 def merge_intervals(intervals):
-    """Merge contiguous intervals that share the same property."""
     merged = []
     for start, end, prop in sorted(intervals, key=lambda x: x[0]):
         if merged and merged[-1][2] == prop and start <= merged[-1][1] + 1:
@@ -105,9 +90,7 @@ def merge_intervals(intervals):
             merged.append((start, end, prop))
     return merged
 
-
 def fill_gaps(intervals, max_code=0x10FFFF):
-    """Insert 'Other' spans where no property is defined."""
     filled, prev_end = [], -1
     for start, end, prop in intervals:
         if start > prev_end + 1:
@@ -118,43 +101,72 @@ def fill_gaps(intervals, max_code=0x10FFFF):
         filled.append((prev_end + 1, max_code, 'U_WB_Other'))
     return filled
 
-
 def generate_wordbreak_inc(intervals, outname='unicode_word_break.inc'):
-    """Write an .inc file of {start,end,prop} entries with optional comments."""
     entries = []
     for a, b, p in intervals:
-        entry = f"    {{0x{a:X}, 0x{b:X}, {p}}},"
+        entry   = f"    {{0x{a:X}, 0x{b:X}, {p}}},"
         comment = '' if p.endswith('Other') else format_range_comment(a, b)
         entries.append((entry, comment))
-
     width = max(len(e) for e, _ in entries)
-    lines = ['// Auto-generated from WordBreakProperty.txt; do not edit']
+    lines = ['/* Auto-generated from WordBreakProperty.txt; do not edit */']
     for e, c in entries:
-        pad = ' ' * (width - len(e) + 1) if c else ''
-        suffix = f"// {c}" if c else ''
+        pad    = ' ' * (width - len(e) + 1) if c else ''
+        suffix = f"  /* {c} */" if c else ''
         lines.append(f"{e}{pad}{suffix}")
-
     with open(outname, 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines) + '\n')
     print(f"Wrote word-break table to {outname}")
 
+# ─── East Asian Width “Ambiguous” table ──────────────────────────────────────
+def parse_eastasian(lines):
+    cps = []
+    for ln in lines:
+        ln = ln.strip()
+        if not ln or ln.startswith('#'):
+            continue
+        data = ln.split('#', 1)[0]                    # strip trailing comment
+        span, prop = [p.strip() for p in data.split(';', 1)]
+        if prop == 'A':
+            start_str, end_str = (span.split('..') + [span])[:2]
+            s, e = int(start_str, 16), int(end_str, 16)
+            cps.extend(range(s, e+1))
+    return sorted(set(cps))
+
+def generate_eastasian_inc(cps, outname='unicode_eastasian_ambiguous.inc'):
+    entries = []
+    for a, b in make_intervals(cps):
+        entry   = f"    {{0x{a:X}, 0x{b:X}}},"
+        comment = format_range_comment(a, b)
+        entries.append((entry, comment))
+    width = max(len(e) for e, _ in entries)
+    lines = ['/* Auto-generated EAW=A ranges from EastAsianWidth.txt; do not edit */']
+    for e, c in entries:
+        pad    = ' ' * (width - len(e) + 1) if c else ''
+        suffix = f"  /* {c} */" if c else ''
+        lines.append(f"{e}{pad}{suffix}")
+    with open(outname, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines) + '\n')
+    print(f"Wrote EAW=A table to {outname}")
+
 # ─── Main entry point ────────────────────────────────────────────────────────
-
 def main():
-    # Generate combining marks table
+    # Combining marks
     ucd_lines = download_lines(COMBINING_URL)
-    cps = parse_combining(ucd_lines)
-    combined_intervals = make_intervals(cps)
-    generate_combining_inc(combined_intervals)
+    cps       = parse_combining(ucd_lines)
+    generate_combining_inc(make_intervals(cps))
 
-    # Generate word-break property table
-    wb_lines = download_lines(WORD_BREAK_URL)
+    # Word-break properties
+    wb_lines     = download_lines(WORD_BREAK_URL)
     wb_intervals = parse_wordbreak(wb_lines)
-    merged = merge_intervals(wb_intervals)
-    filled = fill_gaps(merged)
-    final_intervals = merge_intervals(filled)
-    generate_wordbreak_inc(final_intervals)
+    merged       = merge_intervals(wb_intervals)
+    filled       = fill_gaps(merged)
+    final_wb     = merge_intervals(filled)
+    generate_wordbreak_inc(final_wb)
+
+    # East Asian Width Ambiguous
+    eaw_lines = download_lines(EAW_URL)
+    ambiguous = parse_eastasian(eaw_lines)
+    generate_eastasian_inc(ambiguous)
 
 if __name__ == '__main__':
     main()
-

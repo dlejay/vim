@@ -64,6 +64,18 @@ bool unicode_is_combining(rune_T r);
 /*
  * ==========================================================================
  *
+ *   Unicode® Standard Annex #11 - East Asian Width
+ *
+ * ==========================================================================
+ *
+ * Reference:
+ *  https://www.unicode.org/reports/tr11/
+ */
+bool unicode_is_eastasian_ambiguous(rune_T r);
+
+/*
+ * ==========================================================================
+ *
  *   Unicode® Standard Annex #29 - Text Segmentation
  *
  * ==========================================================================
