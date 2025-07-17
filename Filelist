@@ -168,8 +168,6 @@ SRC_ALL =	\
 		src/undo.c \
 		src/unicode.c \
 		src/unicode.h \
-		src/unicode_is_combining.inc \
-		src/unicode_word_break.inc \
 		src/usercmd.c \
 		src/userfunc.c \
 		src/version.c \
@@ -188,6 +186,10 @@ SRC_ALL =	\
 		src/winclip.c \
 		src/window.c \
 		src/xxd/xxd.c \
+		src/tables/unicode_combining.inc \
+		src/tables/unicode_eastasian_ambiguous.inc \
+		src/tables/unicode_simple_fold.inc \
+		src/tables/unicode_word_break.inc \
 		src/testdir/*.in \
 		src/testdir/*.py \
 		src/testdir/Make_all.mak \
