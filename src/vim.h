@@ -441,12 +441,6 @@ typedef unsigned short sattr_T;
 #define MAX_TYPENR 65535
 
 /*
- * The u8char_T can hold one decoded UTF-8 character.
- * We use 32 bits, since some Asian characters don't fit in 16 bits.
- */
-typedef unsigned int u8char_T;	// int is 32 bits or more
-
-/*
  * The vimlong_T has sizeof(vimlong_T) >= 2 * sizeof(int).
  * One use is simple handling of overflow in int calculations.
  */

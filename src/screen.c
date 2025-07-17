@@ -40,6 +40,7 @@
  * ScreenLines[].
  */
 
+#include "unicode.h"
 #include "vim.h"
 
 /*
@@ -1263,7 +1264,7 @@ screen_comp_differs(int off, int *u8cc)
 
     for (i = 0; i < Screen_mco; ++i)
     {
-	if (ScreenLinesC[i][off] != (u8char_T)u8cc[i])
+	if (ScreenLinesC[i][off] != (rune_T)u8cc[i])
 	    return TRUE;
 	if (u8cc[i] == 0)
 	    break;
@@ -1419,7 +1420,7 @@ screen_puts_len(
 		    && ScreenLines2[off] != ptr[1])
 		|| (enc_utf8
 		    && (ScreenLinesUC[off] !=
-				(u8char_T)(c < 0x80 && u8cc[0] == 0 ? 0 : u8c)
+				(rune_T)(c < 0x80 && u8cc[0] == 0 ? 0 : u8c)
 			|| (ScreenLinesUC[off] != 0
 					  && screen_comp_differs(off, u8cc))))
 		|| ScreenAttrs[off] != attr
@@ -2405,8 +2406,8 @@ screenalloc(int doclear)
     int		    outofmem = FALSE;
     int		    len;
     schar_T	    *new_ScreenLines;
-    u8char_T	    *new_ScreenLinesUC = NULL;
-    u8char_T	    *new_ScreenLinesC[MAX_MCO];
+    rune_T	    *new_ScreenLinesUC = NULL;
+    rune_T	    *new_ScreenLinesC[MAX_MCO];
     schar_T	    *new_ScreenLines2 = NULL;
     sattr_T	    *new_ScreenAttrs;
     colnr_T	    *new_ScreenCols;
@@ -2491,12 +2492,12 @@ retry:
 #endif
 
     new_ScreenLines = LALLOC_MULT(schar_T, (Rows + 1) * Columns);
-    vim_memset(new_ScreenLinesC, 0, sizeof(u8char_T *) * MAX_MCO);
+    vim_memset(new_ScreenLinesC, 0, sizeof(rune_T *) * MAX_MCO);
     if (enc_utf8)
     {
-	new_ScreenLinesUC = LALLOC_MULT(u8char_T, (Rows + 1) * Columns);
+	new_ScreenLinesUC = LALLOC_MULT(rune_T, (Rows + 1) * Columns);
 	for (int i = 0; i < p_mco; ++i)
-	    new_ScreenLinesC[i] = LALLOC_CLEAR_MULT(u8char_T,
+	    new_ScreenLinesC[i] = LALLOC_CLEAR_MULT(rune_T,
 							 (Rows + 1) * Columns);
     }
     if (enc_dbcs == DBCS_JPNU)
@@ -2610,11 +2611,11 @@ give_up:
 	    if (enc_utf8)
 	    {
 		(void)vim_memset(new_ScreenLinesUC + new_row * Columns,
-				   0, (size_t)Columns * sizeof(u8char_T));
+				   0, (size_t)Columns * sizeof(rune_T));
 		for (int i = 0; i < p_mco; ++i)
 		    (void)vim_memset(new_ScreenLinesC[i]
 						      + new_row * Columns,
-				   0, (size_t)Columns * sizeof(u8char_T));
+				   0, (size_t)Columns * sizeof(rune_T));
 	    }
 	    if (enc_dbcs == DBCS_JPNU)
 		(void)vim_memset(new_ScreenLines2 + new_row * Columns,
@@ -2651,12 +2652,12 @@ give_up:
 		    {
 			mch_memmove(new_ScreenLinesUC + new_LineOffset[new_row],
 				ScreenLinesUC + LineOffset[old_row],
-				(size_t)len * sizeof(u8char_T));
+				(size_t)len * sizeof(rune_T));
 			for (int i = 0; i < p_mco; ++i)
 			    mch_memmove(new_ScreenLinesC[i]
 						    + new_LineOffset[new_row],
 				ScreenLinesC[i] + LineOffset[old_row],
-				(size_t)len * sizeof(u8char_T));
+				(size_t)len * sizeof(rune_T));
 		    }
 		    if (enc_dbcs == DBCS_JPNU && ScreenLines2 != NULL)
 			mch_memmove(new_ScreenLines2 + new_LineOffset[new_row],
@@ -2878,7 +2879,7 @@ lineclear(unsigned off, int width, int attr)
     (void)vim_memset(ScreenLines + off, ' ', (size_t)width * sizeof(schar_T));
     if (enc_utf8)
 	(void)vim_memset(ScreenLinesUC + off, 0,
-					  (size_t)width * sizeof(u8char_T));
+					  (size_t)width * sizeof(rune_T));
     (void)vim_memset(ScreenAttrs + off, attr, (size_t)width * sizeof(sattr_T));
     (void)vim_memset(ScreenCols + off, -1, (size_t)width * sizeof(colnr_T));
 }
@@ -2920,10 +2921,10 @@ linecopy(int to, int from, win_T *wp)
 	int	i;
 
 	mch_memmove(ScreenLinesUC + off_to, ScreenLinesUC + off_from,
-		wp->w_width * sizeof(u8char_T));
+		wp->w_width * sizeof(rune_T));
 	for (i = 0; i < p_mco; ++i)
 	    mch_memmove(ScreenLinesC[i] + off_to, ScreenLinesC[i] + off_from,
-		    wp->w_width * sizeof(u8char_T));
+		    wp->w_width * sizeof(rune_T));
     }
     if (enc_dbcs == DBCS_JPNU)
 	mch_memmove(ScreenLines2 + off_to, ScreenLines2 + off_from,
