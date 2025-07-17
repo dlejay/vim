@@ -51,7 +51,7 @@
 #else
     /* This should not happen on a C89-compliant compiler. */
     #error "Could not find a signed integer type " \
-           "large enough for a Unicode rune."
+	   "large enough for a Unicode rune."
 #endif
 
 /* -------------------------------------------------------------------------
@@ -115,4 +115,4 @@ u_word_break_T unicode_get_word_break_property(rune_T r);
  */
 bool unicode_is_w_seg_space(rune_T r);
 
-#endif
+#endif /* VIM_UNICODE_H */
