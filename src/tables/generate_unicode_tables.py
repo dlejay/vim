@@ -10,6 +10,7 @@ WORD_BREAK_URL = (
     'WordBreakProperty.txt'
 )
 EAW_URL = 'https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt'
+CASEFOLD_URL = 'https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt'
 
 # ─── Utility functions ───────────────────────────────────────────────────────
 def download_lines(url):
@@ -124,7 +125,7 @@ def parse_eastasian(lines):
         ln = ln.strip()
         if not ln or ln.startswith('#'):
             continue
-        data = ln.split('#', 1)[0]                    # strip trailing comment
+        data = ln.split('#', 1)[0]
         span, prop = [p.strip() for p in data.split(';', 1)]
         if prop == 'A':
             start_str, end_str = (span.split('..') + [span])[:2]
@@ -148,6 +149,57 @@ def generate_eastasian_inc(cps, outname='unicode_eastasian_ambiguous.inc'):
         f.write('\n'.join(lines) + '\n')
     print(f"Wrote EAW=A table to {outname}")
 
+# ─── Simple Case-Folding table ───────────────────────────────────────────────
+def parse_casefold(lines):
+    pairs = []
+    for ln in lines:
+        ln = ln.strip()
+        if not ln or ln.startswith('#'):
+            continue
+        fields = ln.split('#',1)[0].split(';')
+        cp = int(fields[0], 16)
+        status = fields[1].strip()
+        if status not in ('C','S'):
+            continue
+        mapped = [int(x,16) for x in fields[2].split()]
+        if len(mapped) != 1:
+            continue
+        pairs.append((cp, mapped[0]))
+    return sorted(pairs)
+
+def group_casefold(pairs):
+    groups = []
+    if not pairs:
+        return groups
+    start, prev = pairs[0][0], pairs[0][0]
+    diff = pairs[0][1] - pairs[0][0]
+    stride = None
+    for cp, mc in pairs[1:]:
+        d = mc - cp
+        s = cp - prev
+        if d == diff and (stride is None or s == stride):
+            stride = s if stride is None else stride
+            prev = cp
+        else:
+            groups.append((start, prev,
+                           -1 if start == prev else stride,
+                           diff))
+            start = prev = cp
+            diff = d
+            stride = None
+    groups.append((start, prev,
+                   -1 if start == prev else stride,
+                   diff))
+    return groups
+
+def generate_casefold_inc(groups, outname='unicode_simple_fold.inc'):
+    lines = ['/* Auto-generated simple case-folding; do not edit */']
+    for a,b,step,d in groups:
+        lines.append(f"    {{0x{a:X},0x{b:X},{step},{d}}},")
+    with open(outname, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines) + '\n')
+    print(f"Wrote simple case-folding table to {outname}")
+
 # ─── Main entry point ────────────────────────────────────────────────────────
 def main():
     # Combining marks
@@ -168,5 +220,12 @@ def main():
     ambiguous = parse_eastasian(eaw_lines)
     generate_eastasian_inc(ambiguous)
 
+    # Simple Case-Folding
+    cf_lines = download_lines(CASEFOLD_URL)
+    cf_pairs = parse_casefold(cf_lines)
+    cf_groups = group_casefold(cf_pairs)
+    generate_casefold_inc(cf_groups)
+
 if __name__ == '__main__':
     main()
+

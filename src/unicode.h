@@ -54,12 +54,16 @@
 	   "large enough for a Unicode rune."
 #endif
 
-/* -------------------------------------------------------------------------
- *  unicode_is_combining ― true if r has Canonical_Combining_Class ≠ 0
- *
- *  Table source: UnicodeData.txt  → unicode_is_combining.inc
- * ------------------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+ *  2.1 Combining characters
+ * ----------------------------------------------------------------- */
 bool unicode_is_combining(rune_T r);
+
+/* -----------------------------------------------------------------
+ *  3.13 Default Case Algorithms
+ * ----------------------------------------------------------------- */
+/*  3.13.3 Default Case Folding  */
+rune_T unicode_simple_fold(rune_T r);
 
 /*
  * ==========================================================================
@@ -107,7 +111,7 @@ typedef enum
     U_WB_MidNumLet,
     U_WB_WSegSpace,
     U_WB_ZWJ,
-} u_word_break_T;
+} unicode_word_break_T;
 
 /*
  * Rule Macros (UAX #29 Table 3a)
@@ -120,7 +124,7 @@ typedef enum
  * Return the Word_Break property of a given Unicode codepoint.
  * Falls back to U_WB_Other if the codepoint is outside the defined ranges.
  */
-u_word_break_T unicode_get_word_break_property(rune_T r);
+unicode_word_break_T unicode_get_word_break_property(rune_T r);
 
 /*
  * Test whether a codepoint has the Word_Break=WSegSpace property.

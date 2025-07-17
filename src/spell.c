@@ -57,6 +57,7 @@
 
 #define IN_SPELL_C
 #include "vim.h"
+#include "unicode.h"
 
 #if defined(FEAT_SPELL) || defined(PROTO)
 
@@ -2674,7 +2675,7 @@ init_spell_chartab(void)
     {
 	for (i = 128; i < 256; ++i)
 	{
-	    int f = utf_fold(i);
+	    int f = unicode_simple_fold(i);
 	    int u = utf_toupper(i);
 
 	    spelltab.st_isu[i] = utf_isupper(i);

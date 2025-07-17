@@ -42,7 +42,6 @@ int utf_printable(int c);
 int utf_class(int c);
 int utf_class_buf(int c, buf_T *buf);
 int utf_ambiguous_width(int c);
-int utf_fold(int a);
 int utf_toupper(int a);
 int utf_islower(int a);
 int utf_tolower(int a);

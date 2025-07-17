@@ -3047,14 +3047,14 @@ do_class:
 	    if ((len = (*mb_ptr2len)(opnd)) > 1)
 	    {
 		if (rex.reg_ic && enc_utf8)
-		    cf = utf_fold(utf_ptr2char(opnd));
+		    cf = unicode_simple_fold(utf_ptr2char(opnd));
 		while (count < maxcount && (*mb_ptr2len)(scan) >= len)
 		{
 		    for (i = 0; i < len; ++i)
 			if (opnd[i] != scan[i])
 			    break;
 		    if (i < len && (!rex.reg_ic || !enc_utf8
-					|| utf_fold(utf_ptr2char(scan)) != cf))
+					|| unicode_simple_fold(utf_ptr2char(scan)) != cf))
 			break;
 		    scan += len;
 		    ++count;
@@ -5014,7 +5014,8 @@ bt_regexec_both(
 	if (prog->regstart == NUL
 		|| prog->regstart == c
 		|| (rex.reg_ic
-		    && (((enc_utf8 && utf_fold(prog->regstart) == utf_fold(c)))
+		    && (((enc_utf8 && unicode_simple_fold(prog->regstart)
+					== unicode_simple_fold(c)))
 			|| (c < 255 && prog->regstart < 255 &&
 			    MB_TOLOWER(prog->regstart) == MB_TOLOWER(c)))))
 	    retval = regtry(prog, col, timed_out);

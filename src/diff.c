@@ -18,6 +18,7 @@
 
 #include "vim.h"
 #include "xdiff/xdiff.h"
+#include "unicode.h"
 
 #if defined(FEAT_DIFF) || defined(PROTO)
 
@@ -2501,8 +2502,8 @@ diff_equal_char(char_u *p1, char_u *p2, int *len)
 	if (STRNCMP(p1, p2, l) != 0
 		&& (!enc_utf8
 		    || !(diff_flags & DIFF_ICASE)
-		    || utf_fold(utf_ptr2char(p1))
-						!= utf_fold(utf_ptr2char(p2))))
+		    || unicode_simple_fold(utf_ptr2char(p1))
+				!= unicode_simple_fold(utf_ptr2char(p2))))
 	    return FALSE;
 	*len = l;
     }

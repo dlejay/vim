@@ -256,10 +256,10 @@ typedef struct spelltab_S
 // that for ASCII, because we don't want to use 'casemap' here.  Otherwise use
 // the "w" library function for characters above 255 if available.
 #ifdef HAVE_TOWLOWER
-# define SPELL_TOFOLD(c) (enc_utf8 && (c) >= 128 ? utf_fold(c) \
+# define SPELL_TOFOLD(c) (enc_utf8 && (c) >= 128 ? unicode_simple_fold(c) \
 	    : (c) < 256 ? (int)spelltab.st_fold[c] : (int)towlower(c))
 #else
-# define SPELL_TOFOLD(c) (enc_utf8 && (c) >= 128 ? utf_fold(c) \
+# define SPELL_TOFOLD(c) (enc_utf8 && (c) >= 128 ? unicode_simple_fold(c) \
 	    : (c) < 256 ? (int)spelltab.st_fold[c] : (c))
 #endif
 
