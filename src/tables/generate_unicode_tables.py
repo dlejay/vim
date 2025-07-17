@@ -60,7 +60,7 @@ def parse_combining(lines):
     )
 
 
-def generate_combining_inc(intervals, outname='unicode_is_combining.inc'):
+def generate_combining_inc(intervals, outname='unicode_combining.inc'):
     """Write an .inc file of {start,end} pairs with optional comments."""
     entries = []
     for a, b in intervals:

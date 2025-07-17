@@ -79,7 +79,7 @@ bool
 unicode_is_combining(rune_T r)
 {
     struct interval combining[] = {
-#include "unicode_is_combining.inc"
+	#include "tables/unicode_combining.inc"
     };
 
     return in_table(combining, sizeof(combining), r);
@@ -125,7 +125,7 @@ u_word_break_T
 unicode_get_word_break_property(rune_T r)
 {
     struct wb_interval Word_Break[] = {
-#include "unicode_word_break.inc"
+	#include "tables/unicode_word_break.inc"
     };
     size_t bot = 0, top = 0, mid = 0;
 
