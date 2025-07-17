@@ -186,6 +186,7 @@ SRC_ALL =	\
 		src/winclip.c \
 		src/window.c \
 		src/xxd/xxd.c \
+		src/tables/generate_unicode_tables.py \
 		src/tables/unicode_combining.inc \
 		src/tables/unicode_eastasian_ambiguous.inc \
 		src/tables/unicode_simple_fold.inc \
