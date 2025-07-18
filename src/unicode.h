@@ -1,4 +1,5 @@
-/*
+/* vi:set ts=8 sts=4 sw=4 et:
+ *
  *  unicode.h
  */
 
@@ -34,23 +35,23 @@
 
 /* Check for C99 or newer, which provides <stdint.h> for int32_t. */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-    #include <stdint.h>
-    typedef int32_t rune_T;
-    #define RUNE_TYPE_CHOSEN "int32_t"
+# include <stdint.h>
+typedef int32_t rune_T;
+# define RUNE_TYPE_CHOSEN "int32_t"
 
 /* Check if 'int' is at least 32 bits. 0x10FFFF requires 21 bits. */
 #elif INT_MAX >= RUNE_MAX
-    typedef int rune_T;
-    #define RUNE_TYPE_CHOSEN "int"
+typedef int rune_T;
+# define RUNE_TYPE_CHOSEN "int"
 
 /* Fallback to 'long int'. C89 guarantees it's at least 32 bits. */
 #elif LONG_MAX >= RUNE_MAX
-    typedef long int rune_T;
-    #define RUNE_TYPE_CHOSEN "long int"
+typedef long int rune_T;
+# define RUNE_TYPE_CHOSEN "long int"
 
 #else
     /* This should not happen on a C89-compliant compiler. */
-    #error "Could not find a signed integer type " \
+# error "Could not find a signed integer type " \
 	   "large enough for a Unicode rune."
 #endif
 

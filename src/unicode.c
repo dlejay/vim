@@ -1,4 +1,4 @@
-/*
+/* vi:set ts=8 sts=4 sw=4 et:
  *
  *  unicode.c – functions related to the Unicode® Standard
  *
@@ -42,20 +42,20 @@ in_table(struct interval *table, size_t size, rune_T r)
 
     // first quick check for Latin1 etc. characters
     if (r < table[0].first)
-	return false;
+        return false;
 
     // binary search in table
     bot = 0;
     top = size / sizeof(struct interval) - 1;
     while (top >= bot)
     {
-	mid = (bot + top) / 2;
-	if (table[mid].last < r)
-	    bot = mid + 1;
-	else if (table[mid].first > r)
-	    top = mid - 1;
-	else
-	    return true;
+        mid = (bot + top) / 2;
+        if (table[mid].last < r)
+            bot = mid + 1;
+        else if (table[mid].first > r)
+            top = mid - 1;
+        else
+            return true;
     }
     return false;
 }
@@ -73,7 +73,7 @@ bool
 unicode_is_combining(rune_T r)
 {
     struct interval combining[] = {
-	#include "tables/unicode_combining.inc"
+#include "tables/unicode_combining.inc"
     };
 
     return in_table(combining, sizeof(combining), r);
@@ -113,20 +113,19 @@ unicode_convert(rune_T r, struct convert_interval table[], size_t table_size)
     end = entries;
     while (start < end)
     {
-	// need to search further
-	mid = (end + start) / 2;
-	if (table[mid].range_end < r)
-	    start = mid + 1;
-	else
-	    end = mid;
+        // need to search further
+        mid = (end + start) / 2;
+        if (table[mid].range_end < r)
+            start = mid + 1;
+        else
+            end = mid;
     }
-    if (start < entries
-	    && table[start].range_start <= r
-	    && r <= table[start].range_end
-	    && (r - table[start].range_start) % table[start].step == 0)
-	return (r + table[start].offset);
+    if (start < entries && table[start].range_start <= r &&
+        r <= table[start].range_end &&
+        (r - table[start].range_start) % table[start].step == 0)
+        return (r + table[start].offset);
     else
-	return r;
+        return r;
 }
 
 /*  --- 13.2 Default Case Conversion ---  */
@@ -138,7 +137,7 @@ rune_T
 unicode_simple_toupper(rune_T r)
 {
     struct convert_interval simple_toupper[] = {
-	#include "tables/unicode_simple_toupper.inc"
+#include "tables/unicode_simple_toupper.inc"
     };
 
     /* Be quick for ASCII */
@@ -152,7 +151,7 @@ rune_T
 unicode_simple_tolower(rune_T r)
 {
     struct convert_interval simple_tolower[] = {
-	#include "tables/unicode_simple_tolower.inc"
+#include "tables/unicode_simple_tolower.inc"
     };
 
     /* Be quick for ASCII */
@@ -172,12 +171,12 @@ rune_T
 unicode_simple_fold(rune_T r)
 {
     struct convert_interval simple_fold[] = {
-	#include "tables/unicode_simple_fold.inc"
+#include "tables/unicode_simple_fold.inc"
     };
 
     if (r < 0x80)
-	// be fast for ASCII
-	return r >= 0x41 && r <= 0x5a ? r + 32 : r;
+        // be fast for ASCII
+        return r >= 0x41 && r <= 0x5a ? r + 32 : r;
     return unicode_convert(r, simple_fold, sizeof(simple_fold));
 }
 
@@ -194,7 +193,7 @@ bool
 unicode_is_eastasian_ambiguous(rune_T r)
 {
     struct interval eastasian_ambiguous[] = {
-	#include "tables/unicode_eastasian_ambiguous.inc"
+#include "tables/unicode_eastasian_ambiguous.inc"
     };
 
     return in_table(eastasian_ambiguous, sizeof(eastasian_ambiguous), r);
@@ -232,25 +231,25 @@ unicode_word_break_T
 unicode_get_word_break_property(rune_T r)
 {
     struct wb_interval word_break[] = {
-	#include "tables/unicode_word_break.inc"
+#include "tables/unicode_word_break.inc"
     };
     size_t bot = 0, top = 0, mid = 0;
 
     // Defensive check
     if (r < 0 || r > 0x10ffff)
-	return U_WB_Other;
+        return U_WB_Other;
 
     // binary search in table
     top = sizeof(word_break) / sizeof(struct wb_interval) - 1;
     while (top >= bot)
     {
-	mid = (bot + top) / 2;
-	if (word_break[mid].last < r)
-	    bot = mid + 1;
-	else if (word_break[mid].first > r)
-	    top = mid - 1;
-	else
-	    return word_break[mid].wb;
+        mid = (bot + top) / 2;
+        if (word_break[mid].last < r)
+            bot = mid + 1;
+        else if (word_break[mid].first > r)
+            top = mid - 1;
+        else
+            return word_break[mid].wb;
     }
     return U_WB_Other;
 }
@@ -259,8 +258,8 @@ bool
 unicode_is_w_seg_space(rune_T c)
 {
     return c == 0x0020 ||  // SPACE
-	   c == 0x1680 ||  // OGHAM SPACE MARK
-	   (c >= 0x2000 && c <= 0x200A) ||  // EN QUAD .. HAIR SPACE
-	   c == 0x205F ||  // MEDIUM MATHEMATICAL SPACE
-	   c == 0x3000;    // IDEOGRAPHIC SPACE
+           c == 0x1680 ||  // OGHAM SPACE MARK
+           (c >= 0x2000 && c <= 0x200A) ||  // EN QUAD .. HAIR SPACE
+           c == 0x205F ||  // MEDIUM MATHEMATICAL SPACE
+           c == 0x3000;    // IDEOGRAPHIC SPACE
 }
