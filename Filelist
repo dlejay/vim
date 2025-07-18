@@ -188,7 +188,7 @@ SRC_ALL =	\
 		src/xxd/xxd.c \
 		src/tables/generate_unicode_tables.py \
 		src/tables/unicode_combining.inc \
-		src/tables/unicode_eastasian_ambiguous.inc \
+		src/tables/unicode_east_asian_width.inc \
 		src/tables/unicode_simple_fold.inc \
 		src/tables/unicode_simple_toupper.inc \
 		src/tables/unicode_simple_tolower.inc \

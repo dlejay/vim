@@ -1,4 +1,4 @@
-/* Auto-generated simple case-folding; do not edit */
+/* Auto-generated simple case-fold */
     {0x41,0x5A,1,32},
     {0xB5,0xB5,-1,775},
     {0xC0,0xD6,1,32},

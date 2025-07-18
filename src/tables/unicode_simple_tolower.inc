@@ -1,4 +1,4 @@
-/* Auto-generated simple tolower; do not edit */
+/* Auto-generated simple tolower */
     {0x41,0x5A,1,32},
     {0xC0,0xD6,1,32},
     {0xD8,0xDE,1,32},

@@ -1,4 +1,4 @@
-/* Auto-generated simple toupper; do not edit */
+/* Auto-generated simple toupper */
     {0x61,0x7A,1,-32},
     {0xB5,0xB5,-1,743},
     {0xE0,0xF6,1,-32},

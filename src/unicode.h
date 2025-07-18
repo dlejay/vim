@@ -71,6 +71,7 @@ rune_T unicode_simple_tolower(rune_T r);
 /*  --- 3.13.3 Default Case Folding --- */
 rune_T unicode_simple_fold(rune_T r);
 
+
 /*
  * ==========================================================================
  *
@@ -78,10 +79,24 @@ rune_T unicode_simple_fold(rune_T r);
  *
  * ==========================================================================
  *
- * Reference:
- *  https://www.unicode.org/reports/tr11/
+ * These enums model the Unicode East_Asian_Width property,
+ * defined in EastAsianWidth-16.0.0.txt.
+ *
  */
-bool unicode_is_eastasian_ambiguous(rune_T r);
+typedef enum
+{
+    U_EAW_A,
+    U_EAW_F,
+    U_EAW_H,
+    U_EAW_N,
+    U_EAW_Na,
+    U_EAW_W,
+} unicode_east_asian_width_T;
+
+/*
+ * Return the East_Asian_Width property of a given Unicode codepoint.
+ */
+unicode_east_asian_width_T unicode_east_asian_width(rune_T r);
 
 /*
  * ==========================================================================
@@ -130,7 +145,7 @@ typedef enum
  * Return the Word_Break property of a given Unicode codepoint.
  * Falls back to U_WB_Other if the codepoint is outside the defined ranges.
  */
-unicode_word_break_T unicode_get_word_break_property(rune_T r);
+unicode_word_break_T unicode_word_break(rune_T r);
 
 /*
  * Test whether a codepoint has the Word_Break=WSegSpace property.

@@ -189,14 +189,41 @@ unicode_simple_fold(rune_T r)
  *
  * =================================================================
  */
-bool
-unicode_is_eastasian_ambiguous(rune_T r)
+struct eaw_interval
 {
-    struct interval eastasian_ambiguous[] = {
-#include "tables/unicode_eastasian_ambiguous.inc"
-    };
+    rune_T first;
+    rune_T last;
+    unicode_east_asian_width_T eaw;
+};
 
-    return in_table(eastasian_ambiguous, sizeof(eastasian_ambiguous), r);
+/*
+ *  Source: word_break-16.0.0.txt
+ */
+unicode_east_asian_width_T
+unicode_east_asian_width(rune_T r)
+{
+    struct eaw_interval east_asian_width[] = {
+#include "tables/unicode_east_asian_width.inc"
+    };
+    size_t bot = 0, top = 0, mid = 0;
+
+    // Defensive check
+    if (r < 0 || r > 0x10ffff)
+        return U_EAW_N;
+
+    // binary search in table
+    top = sizeof(east_asian_width) / sizeof(struct eaw_interval) - 1;
+    while (top >= bot)
+    {
+        mid = (bot + top) / 2;
+        if (east_asian_width[mid].last < r)
+            bot = mid + 1;
+        else if (east_asian_width[mid].first > r)
+            top = mid - 1;
+        else
+            return east_asian_width[mid].eaw;
+    }
+    return U_EAW_N;
 }
 
 /*
@@ -228,7 +255,7 @@ struct wb_interval
  *  Source: word_break-16.0.0.txt
  */
 unicode_word_break_T
-unicode_get_word_break_property(rune_T r)
+unicode_word_break(rune_T r)
 {
     struct wb_interval word_break[] = {
 #include "tables/unicode_word_break.inc"

@@ -1,302 +1,181 @@
 #!/usr/bin/env python3
-import urllib.request
-import unicodedata
-import os
+import urllib.request, unicodedata
 
-# ─── URLs for Unicode data ───────────────────────────────────────────────────
+# ─── URLs ────────────────────────────────────────────────────────────────────
 UNICODEDATA_URL = 'https://unicode.org/Public/UCD/latest/ucd/UnicodeData.txt'
-COMBINING_URL    = UNICODEDATA_URL
-WORD_BREAK_URL   = (
-    'https://unicode.org/Public/UCD/latest/ucd/auxiliary/'
-    'WordBreakProperty.txt'
-)
-EAW_URL          = 'https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt'
-CASEFOLD_URL     = 'https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt'
+WORD_BREAK_URL  = 'https://unicode.org/Public/UCD/latest/ucd/auxiliary/WordBreakProperty.txt'
+EAW_URL         = 'https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt'
+CASEFOLD_URL    = 'https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt'
 
-# ─── Utility functions ───────────────────────────────────────────────────────
+# ─── Utils ───────────────────────────────────────────────────────────────────
 def download_lines(url):
-    with urllib.request.urlopen(url) as resp:
-        return resp.read().decode('utf-8').splitlines()
+    with urllib.request.urlopen(url) as r:
+        return r.read().decode('utf-8').splitlines()
 
 def make_intervals(cps):
-    intervals = []
-    if not cps:
-        return intervals
-    start = prev = cps[0]
-    for cp in cps[1:]:
-        if cp == prev + 1:
-            prev = cp
-        else:
-            intervals.append((start, prev))
-            start = prev = cp
-    intervals.append((start, prev))
-    return intervals
+    if not cps: return []
+    out, a = [], cps[0]
+    for i, cp in enumerate(cps[1:], 1):
+        if cp != cps[i-1] + 1:
+            out.append((a, cps[i-1])); a = cp
+    out.append((a, cps[-1])); return out
 
-def format_range_comment(start, end):
-    try:
-        first = unicodedata.name(chr(start))
-    except ValueError:
-        return ''
-    if start == end:
-        return first
-    try:
-        last = unicodedata.name(chr(end))
-    except ValueError:
-        return ''
-    return f"{first}..{last}"
+def format_range_comment(a, b):
+    try:     n1 = unicodedata.name(chr(a))
+    except ValueError: return ''
+    if a == b: return n1
+    try:     n2 = unicodedata.name(chr(b))
+    except ValueError: return ''
+    return f'{n1}..{n2}'
 
-# ─── Combining marks table ───────────────────────────────────────────────────
-def parse_combining(lines):
-    return sorted(
-        int(fields[0], 16)
-        for ln in lines if ln and not ln.startswith('#')
-        for fields in [ln.split(';')]
-        if fields[2].startswith('M')
-    )
-
-def generate_combining_inc(intervals, outname='unicode_combining.inc'):
-    entries = []
-    for a, b in intervals:
-        entry   = f"    {{0x{a:X}, 0x{b:X}}},"
-        comment = format_range_comment(a, b)
-        entries.append((entry, comment))
-    width = max(len(e) for e, _ in entries)
-    lines = ['/* Auto-generated combining-mark ranges from UnicodeData.txt; do not edit */']
-    for e, c in entries:
-        pad    = ' ' * (width - len(e) + 1) if c else ''
-        suffix = f"  /* {c} */" if c else ''
-        lines.append(f"{e}{pad}{suffix}")
-    with open(outname, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-    print(f"Wrote combining table to {outname}")
-
-# ─── Word-break property table ───────────────────────────────────────────────
-def parse_wordbreak(lines):
-    intervals = []
-    for ln in lines:
-        ln = ln.strip()
-        if not ln or ln.startswith('#'):
-            continue
-        span, prop = ln.split('#', 1)[0].split(';')[:2]
-        start_str, end_str = (span.split('..') + [span])[:2]
-        start, end = int(start_str, 16), int(end_str, 16)
-        intervals.append((start, end, f"U_WB_{prop.strip()}"))
-    return intervals
-
-def merge_intervals(intervals):
+def merge_intervals(runs):
     merged = []
-    for start, end, prop in sorted(intervals, key=lambda x: x[0]):
-        if merged and merged[-1][2] == prop and start <= merged[-1][1] + 1:
-            merged[-1] = (merged[-1][0], max(merged[-1][1], end), prop)
+    for a, b, p in sorted(runs, key=lambda r: r[0]):
+        if merged and merged[-1][2] == p and a <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], b), p)
         else:
-            merged.append((start, end, prop))
+            merged.append((a, b, p))
     return merged
 
-def fill_gaps(intervals, max_code=0x10FFFF):
-    filled, prev_end = [], -1
-    for start, end, prop in intervals:
-        if start > prev_end + 1:
-            filled.append((prev_end + 1, start - 1, 'U_WB_Other'))
-        filled.append((start, end, prop))
-        prev_end = end
-    if prev_end < max_code:
-        filled.append((prev_end + 1, max_code, 'U_WB_Other'))
-    return filled
+# ─── Combining marks (unchanged) ─────────────────────────────────────────────
+def parse_combining(ucd):
+    return sorted(int(f[0], 16)
+                  for l in ucd if l and not l.startswith('#')
+                  for f in [l.split(';')] if f[2].startswith('M'))
 
-def generate_wordbreak_inc(intervals, outname='unicode_word_break.inc'):
-    entries = []
-    for a, b, p in intervals:
-        entry   = f"    {{0x{a:X}, 0x{b:X}, {p}}},"
-        comment = '' if p.endswith('Other') else format_range_comment(a, b)
-        entries.append((entry, comment))
-    width = max(len(e) for e, _ in entries)
-    lines = ['/* Auto-generated from WordBreakProperty.txt; do not edit */']
-    for e, c in entries:
-        pad    = ' ' * (width - len(e) + 1) if c else ''
-        suffix = f"  /* {c} */" if c else ''
-        lines.append(f"{e}{pad}{suffix}")
-    with open(outname, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-    print(f"Wrote word-break table to {outname}")
+def gen_combining_inc(r):
+    w = max(len(f"    {{0x{a:X}, 0x{b:X}}},") for a, b in r)
+    lines = ['/* Auto-generated combining-mark ranges */']
+    for a, b in r:
+        entry = f"    {{0x{a:X}, 0x{b:X}}},"
+        cmt   = format_range_comment(a, b)
+        pad   = ' '*(w-len(entry)+1) if cmt else ''
+        lines.append(f"{entry}{pad}{'/* '+cmt+' */' if cmt else ''}")
+    open('unicode_combining.inc','w',encoding='utf-8').write('\n'.join(lines)+'\n')
 
-# ─── East Asian Width “Ambiguous” table ──────────────────────────────────────
-def parse_eastasian(lines):
-    cps = []
-    for ln in lines:
-        ln = ln.strip()
-        if not ln or ln.startswith('#'):
-            continue
-        data = ln.split('#', 1)[0]
-        span, prop = [p.strip() for p in data.split(';', 1)]
-        if prop == 'A':
-            start_str, end_str = (span.split('..') + [span])[:2]
-            s, e = int(start_str, 16), int(end_str, 16)
-            cps.extend(range(s, e+1))
-    return sorted(set(cps))
+# ─── Word-Break ──────────────────────────────────────────────────────────────
+def parse_wordbreak(txt):
+    runs=[]
+    for l in txt:
+        l=l.strip()
+        if not l or l.startswith('#'): continue
+        span, prop = l.split('#',1)[0].split(';')[:2]
+        a,b=[int(x,16) for x in (span.split('..')+[span])[:2]]
+        runs.append((a,b,f'U_WB_{prop.strip()}'))
+    return runs
 
-def generate_eastasian_inc(cps, outname='unicode_eastasian_ambiguous.inc'):
-    entries = []
-    for a, b in make_intervals(cps):
-        entry   = f"    {{0x{a:X}, 0x{b:X}}},"
-        comment = format_range_comment(a, b)
-        entries.append((entry, comment))
-    width = max(len(e) for e, _ in entries)
-    lines = ['/* Auto-generated EAW=A ranges from EastAsianWidth.txt; do not edit */']
-    for e, c in entries:
-        pad    = ' ' * (width - len(e) + 1) if c else ''
-        suffix = f"  /* {c} */" if c else ''
-        lines.append(f"{e}{pad}{suffix}")
-    with open(outname, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-    print(f"Wrote EAW=A table to {outname}")
+def fill_wb_gaps(runs, hi=0x10FFFF):
+    out, prev = [], -1
+    for a,b,p in runs:
+        if a>prev+1: out.append((prev+1,a-1,'U_WB_Other'))
+        out.append((a,b,p)); prev=b
+    if prev<hi: out.append((prev+1,hi,'U_WB_Other'))
+    return out
 
-# ─── Simple Case-Folding table ───────────────────────────────────────────────
-def parse_casefold(lines):
-    pairs = []
-    for ln in lines:
-        ln = ln.strip()
-        if not ln or ln.startswith('#'):
-            continue
-        fields = ln.split('#',1)[0].split(';')
-        cp = int(fields[0], 16)
-        status = fields[1].strip()
-        if status not in ('C','S'):
-            continue
-        mapped = [int(x,16) for x in fields[2].split()]
-        if len(mapped) != 1:
-            continue
-        pairs.append((cp, mapped[0]))
+def gen_wb_inc(runs):
+    w=max(len(f"    {{0x{a:X}, 0x{b:X}, {p}}},") for a,b,p in runs)
+    out=['/* Auto-generated WordBreakProperty */']
+    for a,b,p in runs:
+        ent=f"    {{0x{a:X}, 0x{b:X}, {p}}},"
+        c='' if p.endswith('Other') else format_range_comment(a,b)
+        pad=' '*(w-len(ent)+1) if c else ''
+        out.append(f"{ent}{pad}{'/* '+c+' */' if c else ''}")
+    open('unicode_word_break.inc','w',encoding='utf-8').write('\n'.join(out)+'\n')
+
+# ─── East Asian Width ────────────────────────────────────────────────────────
+def parse_eaw(txt):
+    runs=[]
+    for l in txt:
+        l=l.strip()
+        if not l or l.startswith('#'): continue
+        span,prop=l.split('#',1)[0].split(';')[:2]
+        a,b=[int(x,16) for x in (span.split('..')+[span])[:2]]
+        runs.append((a,b,f'U_EAW_{prop.strip()}'))
+    return runs
+
+def fill_eaw_gaps(runs, hi=0x10FFFF):
+    out, prev = [], -1
+    for a,b,p in runs:
+        if a>prev+1: out.append((prev+1,a-1,'U_EAW_N'))
+        out.append((a,b,p)); prev=b
+    if prev<hi: out.append((prev+1,hi,'U_EAW_N'))
+    return out
+
+def gen_eaw_inc(runs):
+    w=max(len(f"    {{0x{a:X}, 0x{b:X}, {p}}},") for a,b,p in runs)
+    out=['/* Auto-generated EastAsianWidth */']
+    for a,b,p in runs:
+        ent=f"    {{0x{a:X}, 0x{b:X}, {p}}},"
+        c='' if p.endswith('_N') else format_range_comment(a,b)
+        pad=' '*(w-len(ent)+1) if c else ''
+        out.append(f"{ent}{pad}{'/* '+c+' */' if c else ''}")
+    open('unicode_east_asian_width.inc','w',encoding='utf-8').write('\n'.join(out)+'\n')
+
+# ─── Case-fold + Upper/Lower (inchangés) ─────────────────────────────────────
+def parse_casefold(txt):
+    pairs=[]
+    for l in txt:
+        l=l.strip()
+        if not l or l.startswith('#'): continue
+        f=l.split('#',1)[0].split(';')
+        cp=int(f[0],16); st=f[1].strip()
+        if st not in ('C','S'): continue
+        m=[int(x,16) for x in f[2].split()]
+        if len(m)==1: pairs.append((cp,m[0]))
     return sorted(pairs)
 
-def group_casefold(pairs):
-    groups = []
-    if not pairs:
-        return groups
-    start, prev = pairs[0][0], pairs[0][0]
-    diff = pairs[0][1] - pairs[0][0]
-    stride = None
-    for cp, mc in pairs[1:]:
-        d = mc - cp
-        s = cp - prev
-        if d == diff and (stride is None or s == stride):
-            stride = s if stride is None else stride
-            prev = cp
+def group_pairs(pairs):
+    if not pairs: return []
+    out=[]; s=pr=pairs[0][0]; d=pairs[0][1]-pairs[0][0]; stride=None
+    for cp,mc in pairs[1:]:
+        delta=mc-cp; step=cp-pr
+        if delta==d and (stride is None or step==stride):
+            stride = step if stride is None else stride; pr=cp
         else:
-            groups.append((start, prev,
-                           -1 if start == prev else stride,
-                           diff))
-            start = prev = cp
-            diff = d
-            stride = None
-    groups.append((start, prev,
-                   -1 if start == prev else stride,
-                   diff))
-    return groups
+            out.append((s,pr,-1 if s==pr else stride,d))
+            s=pr=cp; d=delta; stride=None
+    out.append((s,pr,-1 if s==pr else stride,d)); return out
 
-def generate_casefold_inc(groups, outname='unicode_simple_fold.inc'):
-    lines = ['/* Auto-generated simple case-folding; do not edit */']
-    for a,b,step,d in groups:
-        lines.append(f"    {{0x{a:X},0x{b:X},{step},{d}}},")
-    with open(outname, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-    print(f"Wrote simple case-folding table to {outname}")
+def gen_simple_inc(groups,fname,tag):
+    out=[f'/* Auto-generated simple {tag} */']
+    for a,b,st,d in groups:
+        out.append(f"    {{0x{a:X},0x{b:X},{st},{d}}},")
+    open(fname,'w',encoding='utf-8').write('\n'.join(out)+'\n')
 
-# ─── Simple Upper/Lower tables ───────────────────────────────────────────────
-def parse_casing(lines):
-    upper = []
-    lower = []
-    for ln in lines:
-        ln = ln.strip()
-        if not ln or ln.startswith('#'):
-            continue
-        fields = ln.split(';')
-        cp = int(fields[0], 16)
-        up = fields[12]
-        lo = fields[13]
-        if up:
-            upper.append((cp, int(up, 16)))
-        if lo:
-            lower.append((cp, int(lo, 16)))
-    return sorted(upper), sorted(lower)
+def parse_casing(txt):
+    up, lo = [], []
+    for l in txt:
+        l=l.strip()
+        if not l or l.startswith('#'): continue
+        f=l.split(';'); cp=int(f[0],16)
+        if f[12]: up.append((cp,int(f[12],16)))
+        if f[13]: lo.append((cp,int(f[13],16)))
+    return sorted(up), sorted(lo)
 
-def group_casing(pairs):
-    groups = []
-    if not pairs:
-        return groups
-    # Fix: initialize prev to the original codepoint, not to the mapped value
-    start = prev = pairs[0][0]
-    diff = pairs[0][1] - pairs[0][0]
-    stride = None
-
-    for cp, mc in pairs[1:]:
-        d = mc - cp
-        s = cp - prev
-        if d == diff and (stride is None or s == stride):
-            stride = s if stride is None else stride
-            prev = cp
-        else:
-            groups.append((start, prev,
-                           -1 if start == prev else stride,
-                           diff))
-            start = prev = cp
-            diff = d
-            stride = None
-
-    groups.append((start, prev,
-                   -1 if start == prev else stride,
-                   diff))
-    return groups
-
-def generate_toupper_inc(groups, outname='unicode_simple_toupper.inc'):
-    lines = ['/* Auto-generated simple toupper; do not edit */']
-    for a, b, step, d in groups:
-        lines.append(f"    {{0x{a:X},0x{b:X},{step},{d}}},")
-    with open(outname, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-    print(f"Wrote simple toupper table to {outname}")
-
-def generate_tolower_inc(groups, outname='unicode_simple_tolower.inc'):
-    lines = ['/* Auto-generated simple tolower; do not edit */']
-    for a, b, step, d in groups:
-        lines.append(f"    {{0x{a:X},0x{b:X},{step},{d}}},")
-    with open(outname, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-    print(f">Wrote simple tolower table to {outname}")
-
-# ─── Main entry point ────────────────────────────────────────────────────────
+# ─── Main ────────────────────────────────────────────────────────────────────
 def main():
-    # Combining marks
-    ucd_lines = download_lines(COMBINING_URL)
-    cps       = parse_combining(ucd_lines)
-    generate_combining_inc(make_intervals(cps))
+    # Combining
+    ucd = download_lines(UNICODEDATA_URL)
+    gen_combining_inc(make_intervals(parse_combining(ucd)))
 
-    # Word-break properties
-    wb_lines     = download_lines(WORD_BREAK_URL)
-    wb_intervals = parse_wordbreak(wb_lines)
-    merged       = merge_intervals(wb_intervals)
-    filled       = fill_gaps(merged)
-    final_wb     = merge_intervals(filled)
-    generate_wordbreak_inc(final_wb)
+    # Word-Break
+    wb  = merge_intervals(parse_wordbreak(download_lines(WORD_BREAK_URL)))
+    wb2 = merge_intervals(fill_wb_gaps(wb))
+    gen_wb_inc(wb2)
 
-    # East Asian Width Ambiguous
-    eaw_lines = download_lines(EAW_URL)
-    ambiguous = parse_eastasian(eaw_lines)
-    generate_eastasian_inc(ambiguous)
+    # East Asian Width
+    ea  = merge_intervals(parse_eaw(download_lines(EAW_URL)))
+    ea2 = merge_intervals(fill_eaw_gaps(ea))
+    gen_eaw_inc(ea2)
 
-    # Simple Case-Folding
-    cf_lines   = download_lines(CASEFOLD_URL)
-    cf_pairs   = parse_casefold(cf_lines)
-    cf_groups  = group_casefold(cf_pairs)
-    generate_casefold_inc(cf_groups)
+    # Case-fold
+    cf = group_pairs(parse_casefold(download_lines(CASEFOLD_URL)))
+    gen_simple_inc(cf,'unicode_simple_fold.inc','case-fold')
 
-    # Simple Upper/Lower from UnicodeData
-    ucd_lines          = download_lines(UNICODEDATA_URL)
-    upper_pairs, lower_pairs = parse_casing(ucd_lines)
-    upper_groups       = group_casing(upper_pairs)
-    lower_groups       = group_casing(lower_pairs)
-    generate_toupper_inc(upper_groups)
-    generate_tolower_inc(lower_groups)
+    # Upper / Lower
+    up_pairs, lo_pairs = parse_casing(ucd)
+    gen_simple_inc(group_pairs(up_pairs),'unicode_simple_toupper.inc','toupper')
+    gen_simple_inc(group_pairs(lo_pairs),'unicode_simple_tolower.inc','tolower')
 
 if __name__ == '__main__':
     main()
-
