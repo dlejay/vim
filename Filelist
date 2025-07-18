@@ -190,6 +190,8 @@ SRC_ALL =	\
 		src/tables/unicode_combining.inc \
 		src/tables/unicode_eastasian_ambiguous.inc \
 		src/tables/unicode_simple_fold.inc \
+		src/tables/unicode_simple_toupper.inc \
+		src/tables/unicode_simple_tolower.inc \
 		src/tables/unicode_word_break.inc \
 		src/testdir/*.in \
 		src/testdir/*.py \

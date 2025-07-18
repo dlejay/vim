@@ -62,7 +62,12 @@ bool unicode_is_combining(rune_T r);
 /* -----------------------------------------------------------------
  *  3.13 Default Case Algorithms
  * ----------------------------------------------------------------- */
-/*  3.13.3 Default Case Folding  */
+
+/*  --- 3.13.2 Default Case Conversion ---  */
+rune_T unicode_simple_toupper(rune_T r);
+rune_T unicode_simple_tolower(rune_T r);
+
+/*  --- 3.13.3 Default Case Folding --- */
 rune_T unicode_simple_fold(rune_T r);
 
 /*

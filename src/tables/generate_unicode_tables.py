@@ -4,13 +4,14 @@ import unicodedata
 import os
 
 # ─── URLs for Unicode data ───────────────────────────────────────────────────
-COMBINING_URL = 'https://unicode.org/Public/UCD/latest/ucd/UnicodeData.txt'
-WORD_BREAK_URL = (
-    'https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/'
+UNICODEDATA_URL = 'https://unicode.org/Public/UCD/latest/ucd/UnicodeData.txt'
+COMBINING_URL    = UNICODEDATA_URL
+WORD_BREAK_URL   = (
+    'https://unicode.org/Public/UCD/latest/ucd/auxiliary/'
     'WordBreakProperty.txt'
 )
-EAW_URL = 'https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt'
-CASEFOLD_URL = 'https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt'
+EAW_URL          = 'https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt'
+CASEFOLD_URL     = 'https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt'
 
 # ─── Utility functions ───────────────────────────────────────────────────────
 def download_lines(url):
@@ -200,6 +201,68 @@ def generate_casefold_inc(groups, outname='unicode_simple_fold.inc'):
         f.write('\n'.join(lines) + '\n')
     print(f"Wrote simple case-folding table to {outname}")
 
+# ─── Simple Upper/Lower tables ───────────────────────────────────────────────
+def parse_casing(lines):
+    upper = []
+    lower = []
+    for ln in lines:
+        ln = ln.strip()
+        if not ln or ln.startswith('#'):
+            continue
+        fields = ln.split(';')
+        cp = int(fields[0], 16)
+        up = fields[12]
+        lo = fields[13]
+        if up:
+            upper.append((cp, int(up, 16)))
+        if lo:
+            lower.append((cp, int(lo, 16)))
+    return sorted(upper), sorted(lower)
+
+def group_casing(pairs):
+    groups = []
+    if not pairs:
+        return groups
+    # Fix: initialize prev to the original codepoint, not to the mapped value
+    start = prev = pairs[0][0]
+    diff = pairs[0][1] - pairs[0][0]
+    stride = None
+
+    for cp, mc in pairs[1:]:
+        d = mc - cp
+        s = cp - prev
+        if d == diff and (stride is None or s == stride):
+            stride = s if stride is None else stride
+            prev = cp
+        else:
+            groups.append((start, prev,
+                           -1 if start == prev else stride,
+                           diff))
+            start = prev = cp
+            diff = d
+            stride = None
+
+    groups.append((start, prev,
+                   -1 if start == prev else stride,
+                   diff))
+    return groups
+
+def generate_toupper_inc(groups, outname='unicode_simple_toupper.inc'):
+    lines = ['/* Auto-generated simple toupper; do not edit */']
+    for a, b, step, d in groups:
+        lines.append(f"    {{0x{a:X},0x{b:X},{step},{d}}},")
+    with open(outname, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines) + '\n')
+    print(f"Wrote simple toupper table to {outname}")
+
+def generate_tolower_inc(groups, outname='unicode_simple_tolower.inc'):
+    lines = ['/* Auto-generated simple tolower; do not edit */']
+    for a, b, step, d in groups:
+        lines.append(f"    {{0x{a:X},0x{b:X},{step},{d}}},")
+    with open(outname, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines) + '\n')
+    print(f">Wrote simple tolower table to {outname}")
+
 # ─── Main entry point ────────────────────────────────────────────────────────
 def main():
     # Combining marks
@@ -221,10 +284,18 @@ def main():
     generate_eastasian_inc(ambiguous)
 
     # Simple Case-Folding
-    cf_lines = download_lines(CASEFOLD_URL)
-    cf_pairs = parse_casefold(cf_lines)
-    cf_groups = group_casefold(cf_pairs)
+    cf_lines   = download_lines(CASEFOLD_URL)
+    cf_pairs   = parse_casefold(cf_lines)
+    cf_groups  = group_casefold(cf_pairs)
     generate_casefold_inc(cf_groups)
+
+    # Simple Upper/Lower from UnicodeData
+    ucd_lines          = download_lines(UNICODEDATA_URL)
+    upper_pairs, lower_pairs = parse_casing(ucd_lines)
+    upper_groups       = group_casing(upper_pairs)
+    lower_groups       = group_casing(lower_pairs)
+    generate_toupper_inc(upper_groups)
+    generate_tolower_inc(lower_groups)
 
 if __name__ == '__main__':
     main()

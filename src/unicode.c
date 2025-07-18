@@ -83,6 +83,14 @@ unicode_is_combining(rune_T r)
  *  3.13 Default Case Algorithms
  * ----------------------------------------------------------------- */
 
+/* Tailoring.
+ *
+ * The default casing operations are intended for use in the absence of
+ * tailoring for particular languages and environments. Where a particular
+ * environment requires tailoring of casing operations to produce correct
+ * results, use of such tailoring does not violate conformance to the standard.
+ */
+
 struct convert_interval
 {
     rune_T range_start;
@@ -119,6 +127,39 @@ unicode_convert(rune_T r, struct convert_interval table[], size_t table_size)
 	return (r + table[start].offset);
     else
 	return r;
+}
+
+/*  --- 13.2 Default Case Conversion ---  */
+
+/*
+ * Simple toupper and tolower, based on UnicodeData.txt
+ */
+rune_T
+unicode_simple_toupper(rune_T r)
+{
+    struct convert_interval simple_toupper[] = {
+	#include "tables/unicode_simple_toupper.inc"
+    };
+
+    /* Be quick for ASCII */
+    if ('a' <= r && r <= 'z')
+        return r - ('a' - 'A');
+
+    return unicode_convert(r, simple_toupper, sizeof(simple_toupper));
+}
+
+rune_T
+unicode_simple_tolower(rune_T r)
+{
+    struct convert_interval simple_tolower[] = {
+	#include "tables/unicode_simple_tolower.inc"
+    };
+
+    /* Be quick for ASCII */
+    if ('A' <= r && r <= 'Z')
+        return r - ('A' - 'a');
+
+    return unicode_convert(r, simple_tolower, sizeof(simple_tolower));
 }
 
 /*  --- 3.13.3 Default Case Folding ---  */
