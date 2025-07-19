@@ -214,3 +214,5 @@ unicode_is_w_seg_space(rune_T c)
         || c == 0x205F   /* MEDIUM MATHEMATICAL SPACE */
         || c == 0x3000;  /* IDEOGRAPHIC SPACE */
 }
+
+/* vi:set ts=8 sts=4 sw=4 et: */
