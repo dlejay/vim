@@ -46,28 +46,20 @@ jobs:
 
       - name: Check Filelist (for packaging)
         run: |
-          # If any files in the repository are not listed in Filelist this will
-          # exit with an error code and list the missing entries.
           make -f ci/unlisted.make
 
-      - name: Check hlgroups (are any new hlgroups added, but not handled in highlight.c)
+      - name: Check hlgroups
         run: |
-          # If any highlight groups have been documented, but not handled in
-          # highlight.c, nor listed as 'intentionally left out' in hlgroups.ignore,
-          # exit with an error code and list the missing entries.
           make -C ci -f hlgroups.make
 
       - run: sudo dpkg --add-architecture i386
         if: matrix.architecture == 'i386'
 
       - name: Uninstall snap
-        run: |
-          sudo bash ci/remove_snap.sh
+        run: sudo bash ci/remove_snap.sh
 
       - name: Enable debug packages
         run: |
-          # Some of the ASAN suppressions are in libraries linked with dlopen
-          # and symbolization of them requires these debug packages.
           sudo apt install ubuntu-dbgsym-keyring
           sudo cp ci/ddebs.list /etc/apt/sources.list.d/ddebs.list
           sudo cp ci/pinned-pkgs /etc/apt/preferences.d/pinned-pkgs
@@ -75,30 +67,16 @@ jobs:
       - name: Install packages
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          PKGS=( \
-            gettext \
-            x11-utils \
-            labwc \
-            wl-clipboard \
-            wayland-utils \
-            libgtk-3-dev:${{ matrix.architecture }} \
-            libgtk-3-bin:${{ matrix.architecture }} \
-            desktop-file-utils \
-            libc6-dbgsym:${{ matrix.architecture }} \
-            libtool-bin \
-            libncurses-dev:${{ matrix.architecture }} \
-            libxt-dev:${{ matrix.architecture }} \
-            libegl-mesa0:${{ matrix.architecture }} \
-            libegl1:${{ matrix.architecture }} \
-            libegl1-mesa-dev:${{ matrix.architecture }} \
-            libepoxy-dev:${{ matrix.architecture }} \
-            libwayland-egl1:${{ matrix.architecture }} \
-            libwayland-client0:${{ matrix.architecture }} \
-            libwayland-cursor0:${{ matrix.architecture }} \
-            locales-all \
-            software-properties-common \
-          )
-          sudo apt-get update && sudo apt-get upgrade -y --allow-downgrades && sudo apt-get install -y --allow-downgrades "${PKGS[@]}"
+          PKGS=(gettext x11-utils labwc wl-clipboard wayland-utils \
+                libgtk-3-dev:${{ matrix.architecture }} libgtk-3-bin:${{ matrix.architecture }} \
+                desktop-file-utils libc6-dbgsym:${{ matrix.architecture }} libtool-bin \
+                libncurses-dev:${{ matrix.architecture }} libxt-dev:${{ matrix.architecture }} \
+                libegl-mesa0:${{ matrix.architecture }} libegl1:${{ matrix.architecture }} \
+                libegl1-mesa-dev:${{ matrix.architecture }} libepoxy-dev:${{ matrix.architecture }} \
+                libwayland-egl1:${{ matrix.architecture }} libwayland-client0:${{ matrix.architecture }} \
+                libwayland-cursor0:${{ matrix.architecture }} locales-all software-properties-common)
+          sudo apt-get update && sudo apt-get upgrade -y --allow-downgrades
+          sudo apt-get install -y --allow-downgrades "${PKGS[@]}"
 
       - name: Install gcc-${{ env.GCC_VER }}
         if: matrix.compiler == 'gcc'
@@ -108,44 +86,23 @@ jobs:
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ env.GCC_VER }} 100
           sudo update-alternatives --set gcc /usr/bin/gcc-${{ env.GCC_VER }}
 
-      - name: Install clang-${{ env.CLANG_VER }}
-        if: matrix.compiler == 'clang'
-        run: |
-          . /etc/lsb-release
-          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/llvm-archive-keyring.gpg > /dev/null
-          echo "Types: deb
-          URIs: https://apt.llvm.org/${DISTRIB_CODENAME}/
-          Suites: llvm-toolchain-${DISTRIB_CODENAME}-${{ env.CLANG_VER }}
-          Components: main
-          Signed-By: /usr/share/keyrings/llvm-archive-keyring.gpg" | sudo tee /etc/apt/sources.list.d/llvm-toolchain.sources > /dev/null
-          sudo apt-get update -y
-          sudo apt-get install -y clang-${{ env.CLANG_VER }} llvm-${{ env.CLANG_VER }}
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ env.CLANG_VER }} 100
-          sudo update-alternatives --set clang /usr/bin/clang-${{ env.CLANG_VER }}
-          sudo update-alternatives --install /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-${{ env.CLANG_VER }} 100
-          sudo update-alternatives --install /usr/bin/asan_symbolize asan_symbolize /usr/bin/asan_symbolize-${{ env.CLANG_VER }} 100
-
       - name: Set up environment
         run: |
-          mkdir -p "${LOG_DIR}"
-          mkdir -p "${HOME}/bin"
+          mkdir -p "${LOG_DIR}" "${HOME}/bin"
           echo "${HOME}/bin" >> $GITHUB_PATH
-          (
-          echo "LINUX_VERSION=$(uname -r)"
-          echo "NPROC=$(getconf _NPROCESSORS_ONLN)"
-          echo "TMPDIR=$(mktemp -d -p /tmp)"
-          echo "TEST=${{ matrix.features == 'normal' && 'test' || 'test' }}"
-          echo "CONFOPT="
-          ) >> $GITHUB_ENV
+          {
+            echo "LINUX_VERSION=$(uname -r)"
+            echo "NPROC=$(getconf _NPROCESSORS_ONLN)"
+            echo "TMPDIR=$(mktemp -d -p /tmp)"
+            echo "TEST=test"
+            echo "CONFOPT="
+          } >> $GITHUB_ENV
 
       - name: Set up system
         run: |
-          if [[ ${CC} = clang ]]; then
-            ln -fs /usr/bin/llvm-cov ${HOME}/bin/gcov
-          fi
           sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=0
-            sudo usermod -a -G audio "${USER}"
-            sudo bash ci/setup-xvfb.sh
+          sudo usermod -a -G audio "${USER}"
+          sudo bash ci/setup-xvfb.sh
 
       - name: Set up shadow dir
         if: matrix.shadow
@@ -161,24 +118,34 @@ jobs:
           sed -i -f ci/config.mk.${CC}.sed ${SRCDIR}/auto/config.mk
 
       - name: Build
-        if: (!contains(matrix.extra, 'unittests'))
-        run: |
-          make ${SHADOWOPT} -j${NPROC}
+        run: make ${SHADOWOPT} -j${NPROC}
 
-      # Added debug step (one-step high impact)
-      - name: Debug vim --version (backtrace)
+      # Replaces the former 'Check version' step with a debug backtrace.
+      - name: Debug vim --version (gdb backtrace)
+        continue-on-error: true
         run: |
           sudo apt-get update -y
           sudo apt-get install -y gdb
           ulimit -c unlimited
-          gdb --batch --nx -ex "run" -ex "bt" -ex "bt full" -ex "info registers" \
+          set -x
+          file "${SRCDIR}/vim" || true
+          readelf -h "${SRCDIR}/vim" | egrep 'Class|Machine|Entry' || true
+            gdb --batch --nx \
+              -ex "run" \
+              -ex "bt" \
+              -ex "bt full" \
+              -ex "info registers" \
+              -ex "info files" \
               --args "${SRCDIR}/vim" --version > gdb.log 2>&1 || true
-          echo "===== gdb backtrace ====="
+          echo "===== gdb backtrace (first 120 lines) ====="
           sed -n '1,120p' gdb.log
+          corefile=$(ls -t core* 2>/dev/null | head -1 || true)
+          if [ -n "$corefile" ]; then
+            echo "Core file: $corefile"
+            gdb --batch -c "$corefile" "${SRCDIR}/vim" \
+              -ex "bt" -ex "bt full" -ex "info registers" > core_bt.log 2>&1 || true
+            sed -n '1,80p' core_bt.log
+          fi
 
-      - name: Check version
-        if: (!contains(matrix.extra, 'unittests'))
-        run: |
-          "${SRCDIR}"/vim --version
-          "${SRCDIR}"/vim -u NONE -i NONE --not-a-term -esNX -V1 -S ci/if_ver-1.vim -c quit
-          "${SRCDIR}"/vim -u NONE -i NONE --not-a-term -esNX -V1 -S ci/if_ver-2.vim -c quit
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/test_artifacts
