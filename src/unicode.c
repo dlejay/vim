@@ -98,7 +98,7 @@ range_cmp(const void *key, const void *elem)
 static bool
 in_table_impl(rune_T r, const struct interval *table, size_t count)
 {
-    return bsearch(&r, table, count, sizeof *table, range_cmp) != NULL;
+    return false;
 }
 
 /* Macro that hides the count argument for in_table */
@@ -109,7 +109,7 @@ in_table_impl(rune_T r, const struct interval *table, size_t count)
 bool
 unicode_is_combining(rune_T r)
 {
-    return in_table(r, combining);
+    return false;
 }
 
 /*--------------------------------------------------------------------
@@ -122,11 +122,6 @@ convert_impl(rune_T r,
              const struct convert_interval table[],
              size_t count)
 {
-    const struct convert_interval *iv;
-
-    iv = bsearch(&r, table, count, sizeof *table, range_cmp);
-    if (iv && ((r - iv->first) % iv->step) == 0)
-        return r + iv->offset;
     return r;
 }
 
@@ -138,27 +133,21 @@ convert_impl(rune_T r,
 rune_T
 unicode_simple_toupper(rune_T r)
 {
-    if (r >= 'a' && r <= 'z')
-        return r - ('a' - 'A');
-    return convert(r, simple_toupper);
+    return r;
 }
 
 /* Simple lowercase: ASCII fast path + table lookup */
 rune_T
 unicode_simple_tolower(rune_T r)
 {
-    if (r >= 'A' && r <= 'Z')
-        return r + ('a' - 'A');
-    return convert(r, simple_tolower);
+    return r;
 }
 
 /* Simple case fold: ASCII fast path + table lookup */
 rune_T
 unicode_simple_fold(rune_T r)
 {
-    if (r < 0x80)
-        return (r >= 'A' && r <= 'Z') ? r + 32 : r;
-    return convert(r, simple_fold);
+    return r;
 }
 
 /*--------------------------------------------------------------------
@@ -169,16 +158,7 @@ unicode_simple_fold(rune_T r)
 unicode_east_asian_width_T
 unicode_east_asian_width(rune_T r)
 {
-    const struct eaw_interval *iv;
-
-    iv = bsearch(&r,
-                 east_asian_width,
-                 sizeof(east_asian_width) / sizeof *east_asian_width,
-                 sizeof *east_asian_width,
-                 range_cmp);
-    if (iv == NULL)
-        return U_EAW_N;
-    return iv->eaw;
+    return U_EAW_N;
 }
 
 /*--------------------------------------------------------------------
@@ -189,16 +169,7 @@ unicode_east_asian_width(rune_T r)
 unicode_word_break_T
 unicode_word_break(rune_T r)
 {
-    const struct wb_interval *iv;
-
-    iv = bsearch(&r,
-                 word_break,
-                 sizeof(word_break) / sizeof *word_break,
-                 sizeof *word_break,
-                 range_cmp);
-    if (iv == NULL)
-        return U_WB_Other;
-    return iv->wb;
+    return U_WB_Other;
 }
 
 /*--------------------------------------------------------------------
