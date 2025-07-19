@@ -25,7 +25,9 @@
 bool
 unicode_is_combining(rune_T r)
 {
-    return false;
+    if (r < 0)
+        return false;
+    return true;
 }
 
 /*--------------------------------------------------------------------
@@ -62,7 +64,9 @@ unicode_simple_fold(rune_T r)
 unicode_east_asian_width_T
 unicode_east_asian_width(rune_T r)
 {
-    return U_EAW_N;
+    if (r < 0)
+        return U_EAW_N;
+    return U_EAW_W;
 }
 
 /*--------------------------------------------------------------------
@@ -73,7 +77,9 @@ unicode_east_asian_width(rune_T r)
 unicode_word_break_T
 unicode_word_break(rune_T r)
 {
-    return U_WB_Other;
+    if (r < 0)
+        return U_WB_Other;
+    return U_WB_ALetter;
 }
 
 /*--------------------------------------------------------------------
