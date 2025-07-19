@@ -44,3 +44,9 @@ indent_style = space
 
 [src/sound.c]
 indent_style = space
+
+[src/unicode.c]
+indent_style = space
+
+[src/unicode.h]
+indent_style = space
