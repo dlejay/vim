@@ -62,17 +62,17 @@ jobs:
       - name: Install packages
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          PKGS=(gettext x11-utils labwc wl-clipboard wayland-utils \
-                libgtk-3-dev:${{ matrix.architecture }} libgtk-3-bin:${{ matrix.architecture }} \
-                desktop-file-utils libc6-dbgsym:${{ matrix.architecture }} libtool-bin \
-                libncurses-dev:${{ matrix.architecture }} libxt-dev:${{ matrix.architecture }} \
-                libegl-mesa0:${{ matrix.architecture }} libegl1:${{ matrix.architecture }} \
-                libegl1-mesa-dev:${{ matrix.architecture }} libepoxy-dev:${{ matrix.architecture }} \
-                libwayland-egl1:${{ matrix.architecture }} libwayland-client0:${{ matrix.architecture }} \
-                libwayland-cursor0:${{ matrix.architecture }} locales-all software-properties-common)
-          sudo apt-get update -y
-          sudo apt-get upgrade -y --allow-downgrades
-          sudo apt-get install -y --allow-downgrades "${PKGS[@]}"
+            PKGS=(gettext x11-utils labwc wl-clipboard wayland-utils \
+                  libgtk-3-dev:${{ matrix.architecture }} libgtk-3-bin:${{ matrix.architecture }} \
+                  desktop-file-utils libc6-dbgsym:${{ matrix.architecture }} libtool-bin \
+                  libncurses-dev:${{ matrix.architecture }} libxt-dev:${{ matrix.architecture }} \
+                  libegl-mesa0:${{ matrix.architecture }} libegl1:${{ matrix.architecture }} \
+                  libegl1-mesa-dev:${{ matrix.architecture }} libepoxy-dev:${{ matrix.architecture }} \
+                  libwayland-egl1:${{ matrix.architecture }} libwayland-client0:${{ matrix.architecture }} \
+                  libwayland-cursor0:${{ matrix.architecture }} locales-all software-properties-common)
+            sudo apt-get update -y
+            sudo apt-get upgrade -y --allow-downgrades
+            sudo apt-get install -y --allow-downgrades "${PKGS[@]}"
 
       - name: Install gcc-${{ env.GCC_VER }}
         if: matrix.compiler == 'gcc'
@@ -119,33 +119,29 @@ jobs:
           make -C src shadow
           echo "SRCDIR=${{ matrix.shadow }}" >> "$GITHUB_ENV"
 
-      - name: Build
-        run: make ${SHADOWOPT} -j${NPROC}
+      - name: Build (debug)
+        run: |
+          make ${SHADOWOPT} distclean || true
+          make ${SHADOWOPT} CFLAGS="-g -O0" -j${NPROC}
+          file "${SRCDIR}/vim"
 
-      - name: Debug vim --version (gdb backtrace)
+      - name: Debug vim --version (inspect buf)
         continue-on-error: true
         run: |
           sudo apt-get update -y
           sudo apt-get install -y gdb
-          ulimit -c unlimited
-          set -x
-          file "${SRCDIR}/vim" || true
-          readelf -h "${SRCDIR}/vim" | egrep 'Class|Machine|Entry' || true
           gdb --batch --nx \
+            -ex "set pagination off" \
+            -ex "break save_file_ff" \
             -ex "run" \
             -ex "bt" \
-            -ex "bt full" \
-            -ex "info registers" \
-            -ex "info files" \
-            --args "${SRCDIR}/vim" --version > gdb.log 2>&1 || true
-          echo "===== gdb backtrace (first 120 lines) ====="
-          sed -n '1,120p' gdb.log
-          corefile=$(ls -t core* 2>/dev/null | head -1 || true)
-          if [ -n "$corefile" ]; then
-            echo "Core file: $corefile"
-            gdb --batch -c "$corefile" "${SRCDIR}/vim" -ex "bt" -ex "bt full" -ex "info registers" > core_bt.log 2>&1 || true
-            sed -n '1,80p' core_bt.log
-          fi
+            -ex "print buf" \
+            -ex "ptype *buf" \
+            -ex "info locals" \
+            -ex "x/32wx buf" \
+            -ex "print buf->b_p_ff" \
+            --args "${SRCDIR}/vim" --version > gdb_inspect.log 2>&1 || true
+          sed -n '1,160p' gdb_inspect.log
 
       - if: ${{ !cancelled() }}
         uses: ./.github/actions/test_artifacts

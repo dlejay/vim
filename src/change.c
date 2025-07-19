@@ -11,6 +11,7 @@
  * change.c: functions related to changing text
  */
 
+#define DEBUG_FF_CRASH
 #include "unicode.h"
 #include "vim.h"
 
@@ -941,6 +942,43 @@ unchanged(buf_T *buf, int ff, int always_inc_changedtick)
     void
 save_file_ff(buf_T *buf)
 {
+    #ifdef DEBUG_FF_CRASH
+    /* ---- DEBUG START: shadow i386 segfault instrumentation ---- */
+    if (buf == NULL) {
+        fprintf(stderr, "save_file_ff: buf == NULL\n");
+        abort();
+    }
+    fprintf(stderr,
+            "save_file_ff: buf=%p b_p_ff=%p (expect non-NULL) "
+            "b_start_ffc(before)=%d\n",
+            (void *)buf, (void *)buf->b_p_ff, (int)buf->b_start_ffc);
+
+    /* Dump les 32 octets autour du pointeur buf si suspicion de décalage. */
+    {
+        unsigned char *raw = (unsigned char *)buf;
+        fprintf(stderr, "dump(buf):");
+        for (int i = 0; i < 32; ++i)
+            fprintf(stderr, " %02X", raw[i]);
+        fputc('\n', stderr);
+    }
+
+    /* Vérifier l’adresse interne supposée de b_p_ff vs offsetof. */
+    {
+        size_t off = (size_t)((unsigned char *)&buf->b_p_ff -
+                              (unsigned char *)buf);
+        fprintf(stderr, "offsetof(b_p_ff) computed=%zu\n", off);
+    }
+
+    if (buf->b_p_ff == NULL) {
+        fprintf(stderr,
+                "save_file_ff: b_p_ff == NULL → soit non initialisé, soit "
+                "décalage struct buf_T.\n");
+        /* Pour voir si c’est toujours reproductible sans deref. */
+        abort();  /* Remplacez par 'return;' si vous préférez éviter abort. */
+    }
+    /* ---- DEBUG END ---- */
+#endif
+
     buf->b_start_ffc = *buf->b_p_ff;
     buf->b_start_eof = buf->b_p_eof;
     buf->b_start_eol = buf->b_p_eol;
