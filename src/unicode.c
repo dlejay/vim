@@ -36,7 +36,7 @@ struct interval
  * Return true if "r" is in "table[size / sizeof(struct interval)]".
  */
 static bool
-in_table(struct interval *table, size_t size, rune_T r)
+in_table(const struct interval *table, size_t size, rune_T r)
 {
     size_t mid = 0, bot = 0, top = 0;
 
@@ -69,13 +69,13 @@ in_table(struct interval *table, size_t size, rune_T r)
 /*
  * Source: UnicodeData.txt
  */
+static const struct interval combining[] = {
+#include "tables/unicode_combining.inc"
+};
+
 bool
 unicode_is_combining(rune_T r)
 {
-    struct interval combining[] = {
-#include "tables/unicode_combining.inc"
-    };
-
     return in_table(combining, sizeof(combining), r);
 }
 
@@ -104,7 +104,7 @@ struct convert_interval
  * Uses binary search on a conversion "table".
  */
 static rune_T
-unicode_convert(rune_T r, struct convert_interval table[], size_t table_size)
+unicode_convert(rune_T r, const struct convert_interval table[], size_t table_size)
 {
     size_t start, mid, end; // indices into table
     size_t entries = table_size / sizeof(struct convert_interval);
@@ -133,13 +133,13 @@ unicode_convert(rune_T r, struct convert_interval table[], size_t table_size)
 /*
  * Simple toupper and tolower, based on UnicodeData.txt
  */
+static const struct convert_interval simple_toupper[] = {
+#include "tables/unicode_simple_toupper.inc"
+};
+
 rune_T
 unicode_simple_toupper(rune_T r)
 {
-    struct convert_interval simple_toupper[] = {
-#include "tables/unicode_simple_toupper.inc"
-    };
-
     /* Be quick for ASCII */
     if ('a' <= r && r <= 'z')
         return r - ('a' - 'A');
@@ -147,13 +147,13 @@ unicode_simple_toupper(rune_T r)
     return unicode_convert(r, simple_toupper, sizeof(simple_toupper));
 }
 
+static const struct convert_interval simple_tolower[] = {
+#include "tables/unicode_simple_tolower.inc"
+};
+
 rune_T
 unicode_simple_tolower(rune_T r)
 {
-    struct convert_interval simple_tolower[] = {
-#include "tables/unicode_simple_tolower.inc"
-    };
-
     /* Be quick for ASCII */
     if ('A' <= r && r <= 'Z')
         return r - ('A' - 'a');
@@ -167,16 +167,17 @@ unicode_simple_tolower(rune_T r)
  * Simple Case Folding, based on CaseFolding-16.0.0.txt
  * using mappings with status C + S.
  */
+static const struct convert_interval simple_fold[] = {
+#include "tables/unicode_simple_fold.inc"
+};
+
 rune_T
 unicode_simple_fold(rune_T r)
 {
-    struct convert_interval simple_fold[] = {
-#include "tables/unicode_simple_fold.inc"
-    };
-
+    // be fast for ASCII
     if (r < 0x80)
-        // be fast for ASCII
         return r >= 0x41 && r <= 0x5a ? r + 32 : r;
+
     return unicode_convert(r, simple_fold, sizeof(simple_fold));
 }
 
@@ -199,12 +200,13 @@ struct eaw_interval
 /*
  *  Source: word_break-16.0.0.txt
  */
+static const struct eaw_interval east_asian_width[] = {
+#include "tables/unicode_east_asian_width.inc"
+};
+
 unicode_east_asian_width_T
 unicode_east_asian_width(rune_T r)
 {
-    struct eaw_interval east_asian_width[] = {
-#include "tables/unicode_east_asian_width.inc"
-    };
     size_t bot = 0, top = 0, mid = 0;
 
     // Defensive check
@@ -254,12 +256,13 @@ struct wb_interval
 /*
  *  Source: word_break-16.0.0.txt
  */
+static const struct wb_interval word_break[] = {
+#include "tables/unicode_word_break.inc"
+};
+
 unicode_word_break_T
 unicode_word_break(rune_T r)
 {
-    struct wb_interval word_break[] = {
-#include "tables/unicode_word_break.inc"
-    };
     size_t bot = 0, top = 0, mid = 0;
 
     // Defensive check
