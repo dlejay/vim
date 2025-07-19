@@ -11,7 +11,6 @@
  * change.c: functions related to changing text
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 /*
@@ -2113,7 +2112,7 @@ open_line(
 	{
 	    while ((*p_extra == ' ' || *p_extra == '\t')
 		    && (!enc_utf8
-			       || !unicode_is_combining(utf_ptr2char(p_extra + 1))))
+			       || !utf_iscomposing(utf_ptr2char(p_extra + 1))))
 	    {
 		if (REPLACE_NORMAL(State))
 		    replace_push(*p_extra);
