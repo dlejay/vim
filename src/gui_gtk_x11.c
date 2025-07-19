@@ -25,7 +25,6 @@
  * 2016  Kazunobu Kuriyama  <kazunobu.kuriyama@gmail.com>
  */
 
-#include "unicode.h"
 #include "vim.h"
 #ifdef USE_GRESOURCE
 #include "auto/gui_gtk_gresources.h"
@@ -5574,7 +5573,7 @@ apply_wide_font_attr(char_u *s, int len, PangoAttrList *attr_list)
 		start = p;
 	}
 	else if (uc < 0x80 // optimization shortcut
-		 || (utf_char2cells(uc) != 2 && !unicode_is_combining(uc)))
+		 || (utf_char2cells(uc) != 2 && !utf_iscomposing(uc)))
 	{
 	    INSERT_PANGO_ATTR(pango_attr_font_desc_new(gui.wide_font),
 			      attr_list, start - s, p - s);
@@ -5619,7 +5618,7 @@ count_cluster_cells(char_u *s, PangoItem *item,
 	uc = utf_ptr2char(p);
 	if (uc < 0x80)
 	    ++cellcount;
-	else if (!unicode_is_combining(uc))
+	else if (!utf_iscomposing(uc))
 	    cellcount += utf_char2cells(uc);
     }
 

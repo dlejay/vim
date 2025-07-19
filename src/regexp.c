@@ -10,7 +10,6 @@
 // #define DEBUG
 
 #include "vim.h"
-#include "unicode.h"
 
 #ifdef DEBUG
 // show/save debugging data when BT engine is used
@@ -1786,8 +1785,7 @@ cstrncmp(char_u *s1, char_u *s2, int *n)
 
 	    // Decompose the character if necessary, into 'base' characters.
 	    // Currently hard-coded for Hebrew, Arabic to be done...
-	    if (c1 != c2 && (!rex.reg_ic
-			|| unicode_simple_fold(c1) != unicode_simple_fold(c2)))
+	    if (c1 != c2 && (!rex.reg_ic || utf_fold(c1) != utf_fold(c2)))
 	    {
 		// decomposition necessary?
 		mb_decompose(c1, &c11, &junk, &junk);
@@ -1795,9 +1793,7 @@ cstrncmp(char_u *s1, char_u *s2, int *n)
 		c1 = c11;
 		c2 = c12;
 		if (c11 != c12
-			    && (!rex.reg_ic
-				|| unicode_simple_fold(c11)
-				    != unicode_simple_fold(c12)))
+			    && (!rex.reg_ic || utf_fold(c11) != utf_fold(c12)))
 		    break;
 	    }
 	}
@@ -1826,7 +1822,7 @@ cstrchr(char_u *s, int c)
     // For UTF-8 need to use folded case.
     if (enc_utf8 && c > 0x80)
     {
-	cc = unicode_simple_fold(c);
+	cc = utf_fold(c);
 	lc = cc;
     }
     else
@@ -1853,7 +1849,7 @@ cstrchr(char_u *s, int c)
 		// Do not match an illegal byte.  E.g. 0xff matches 0xc3 0xbf,
 		// not 0xff.
 		// compare with lower case of the character
-		if ((uc < 0x80 || uc != *p) && unicode_simple_fold(uc) == lc)
+		if ((uc < 0x80 || uc != *p) && utf_fold(uc) == lc)
 		    return p;
 	    }
 	    else if (*p == c || *p == cc)

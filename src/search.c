@@ -10,7 +10,6 @@
  * search.c: code for normal mode searching commands
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 #ifdef FEAT_EVAL
@@ -1521,7 +1520,7 @@ do_search(
 
 		    msgbuf[0] = dirc;
 
-		    if (enc_utf8 && unicode_is_combining(utf_ptr2char(p)))
+		    if (enc_utf8 && utf_iscomposing(utf_ptr2char(p)))
 		    {
 			// Use a space to draw the composing char on.
 			msgbuf[1] = ' ';

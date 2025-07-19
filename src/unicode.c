@@ -48,10 +48,6 @@ struct wb_interval {
  * Data table definitions
  *--------------------------------------------------------------------*/
 
-static const struct interval combining[] = {
-#include "tables/unicode_combining.inc"
-};
-
 static const struct convert_interval simple_toupper[] = {
 #include "tables/unicode_simple_toupper.inc"
 };
@@ -93,24 +89,6 @@ range_cmp(const void *key, const void *elem)
 /*--------------------------------------------------------------------
  * Core Specification
  *--------------------------------------------------------------------*/
-
-/* Internal implementation: search combining table */
-static bool
-in_table_impl(rune_T r, const struct interval *table, size_t count)
-{
-    return bsearch(&r, table, count, sizeof *table, range_cmp) != NULL;
-}
-
-/* Macro that hides the count argument for in_table */
-#define in_table(r_, table_) \
-    in_table_impl((r_), (table_), sizeof(table_) / sizeof((table_)[0]))
-
-/* Test for combining character property */
-bool
-unicode_is_combining(rune_T r)
-{
-    return in_table(r, combining);
-}
 
 /*--------------------------------------------------------------------
  * Default Case Algorithms

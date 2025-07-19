@@ -106,7 +106,7 @@
 #define MB_ISUPPER(c)	vim_isupper(c)
 #define MB_TOLOWER(c)	vim_tolower(c)
 #define MB_TOUPPER(c)	vim_toupper(c)
-#define MB_CASEFOLD(c)	(enc_utf8 ? unicode_simple_fold(c) : MB_TOLOWER(c))
+#define MB_CASEFOLD(c)	(enc_utf8 ? utf_fold(c) : MB_TOLOWER(c))
 
 // Use our own isdigit() replacement, because on MS-Windows isdigit() returns
 // non-zero for superscript 1.  Also avoids that isdigit() crashes for numbers
@@ -233,8 +233,7 @@
 # define ARABIC_CHAR(ch)	    (((ch) & 0xFF00) == 0x0600)
 # define UTF_COMPOSINGLIKE(p1, p2)  utf_composinglike((p1), (p2))
 #else
-# include "unicode.h"
-# define UTF_COMPOSINGLIKE(p1, p2)  unicode_is_combining(utf_ptr2char(p2))
+# define UTF_COMPOSINGLIKE(p1, p2)  utf_iscomposing(utf_ptr2char(p2))
 #endif
 
 #ifdef FEAT_RIGHTLEFT

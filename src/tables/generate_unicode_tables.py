@@ -54,28 +54,6 @@ def merge_intervals(runs):
             merged.append((a, b, p))
     return merged
 
-# ─── Combining marks ─────────────────────────────────────────────────────────
-def parse_combining(ucd):
-    return sorted(
-        int(f[0], 16)
-        for l in ucd if l and not l.startswith('#')
-        for f in [l.split(';')]
-        if f[2].startswith('M')
-    )
-
-def gen_combining_inc(r):
-    w = max(len(f"    {{0x{a:X}, 0x{b:X}}},") for a, b in r)
-    lines = ['/* Auto-generated combining-mark ranges */']
-    for a, b in r:
-        entry = f"    {{0x{a:X}, 0x{b:X}}},"
-        cmt = format_range_comment(a, b)
-        pad = ' ' * (w - len(entry) + 1) if cmt else ''
-        lines.append(f"{entry}{pad}{'/* ' + cmt + ' */' if cmt else ''}")
-    filename = 'unicode_combining.inc'
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-    print(f"Wrote {filename}")
-
 # ─── Word-Break ──────────────────────────────────────────────────────────────
 def parse_wordbreak(txt):
     runs = []
@@ -228,10 +206,6 @@ def parse_casing(txt):
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 def main():
-    # Combining
-    ucd = download_lines(UNICODEDATA_URL)
-    gen_combining_inc(make_intervals(parse_combining(ucd)))
-
     # Word-Break
     wb = merge_intervals(parse_wordbreak(download_lines(WORD_BREAK_URL)))
     wb2 = merge_intervals(fill_wb_gaps(wb))
@@ -247,6 +221,7 @@ def main():
     gen_simple_inc(cf, 'unicode_simple_fold.inc', 'case-fold')
 
     # Upper / Lower
+    ucd = download_lines(UNICODEDATA_URL)
     up_pairs, lo_pairs = parse_casing(ucd)
     gen_simple_inc(group_pairs(up_pairs), 'unicode_simple_toupper.inc', 'toupper')
     gen_simple_inc(group_pairs(lo_pairs), 'unicode_simple_tolower.inc', 'tolower')

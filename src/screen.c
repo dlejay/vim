@@ -40,7 +40,6 @@
  * ScreenLines[].
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 /*

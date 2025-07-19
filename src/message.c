@@ -13,7 +13,6 @@
 
 #define MESSAGE_FILE		// don't include prototype for smsg()
 
-#include "unicode.h"
 #include "vim.h"
 
 static void add_msg_hist(char_u *s, int len, int attr);
@@ -326,7 +325,7 @@ trunc_string(
 	{
 	    do
 		half = half - utf_head_off(s, s + half - 1) - 1;
-	    while (half > 0 && unicode_is_combining(utf_ptr2char(s + half)));
+	    while (half > 0 && utf_iscomposing(utf_ptr2char(s + half)));
 	    n = ptr2cells(s + half);
 	    if (len + n > room || half == 0)
 		break;
@@ -1754,7 +1753,7 @@ msg_outtrans_len_attr(char_u *msgstr, int len, int attr)
 
     // If the string starts with a composing character first draw a space on
     // which the composing char can be drawn.
-    if (enc_utf8 && unicode_is_combining(utf_ptr2char(msgstr)))
+    if (enc_utf8 && utf_iscomposing(utf_ptr2char(msgstr)))
 	msg_puts_attr(" ", attr);
 
     /*
@@ -3095,7 +3094,7 @@ t_puts(
     *t_col = 0;
     // If the string starts with a composing character don't increment the
     // column position for it.
-    if (enc_utf8 && unicode_is_combining(utf_ptr2char(t_s)))
+    if (enc_utf8 && utf_iscomposing(utf_ptr2char(t_s)))
 	--msg_col;
     if (msg_col >= Columns)
     {

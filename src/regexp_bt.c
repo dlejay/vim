@@ -241,9 +241,6 @@
 #define HASLOOKBH	0x10	// Contains "\@<=" or "\@<!".
 #define WORST		0	// Worst case.
 
-// Included header
-#include "unicode.h"
-
 static int	num_complex_braces; // Complex \{...} count
 static char_u	*regcode;	// Code-emit pointer, or JUST_CALC_SIZE
 static long	regsize;	// Code size.
@@ -495,7 +492,7 @@ use_multibytecode(int c)
 {
     return has_mbyte && (*mb_char2len)(c) > 1
 		     && (re_multi_type(peekchr()) != NOT_MULTI
-			     || (enc_utf8 && unicode_is_combining(c)));
+			     || (enc_utf8 && utf_iscomposing(c)));
 }
 
 /*
@@ -1337,7 +1334,7 @@ regatom(int *flagp)
 
 	// When '.' is followed by a composing char ignore the dot, so that
 	// the composing char is matched here.
-	if (enc_utf8 && c == Magic('.') && unicode_is_combining(peekchr()))
+	if (enc_utf8 && c == Magic('.') && utf_iscomposing(peekchr()))
 	{
 	    c = getchr();
 	    goto do_multibyte;
@@ -3047,14 +3044,14 @@ do_class:
 	    if ((len = (*mb_ptr2len)(opnd)) > 1)
 	    {
 		if (rex.reg_ic && enc_utf8)
-		    cf = unicode_simple_fold(utf_ptr2char(opnd));
+		    cf = utf_fold(utf_ptr2char(opnd));
 		while (count < maxcount && (*mb_ptr2len)(scan) >= len)
 		{
 		    for (i = 0; i < len; ++i)
 			if (opnd[i] != scan[i])
 			    break;
 		    if (i < len && (!rex.reg_ic || !enc_utf8
-					|| unicode_simple_fold(utf_ptr2char(scan)) != cf))
+					|| utf_fold(utf_ptr2char(scan)) != cf))
 			break;
 		    scan += len;
 		    ++count;
@@ -3809,7 +3806,7 @@ regmatch(
 		}
 		if (enc_utf8)
 		    opndc = utf_ptr2char(opnd);
-		if (enc_utf8 && unicode_is_combining(opndc))
+		if (enc_utf8 && utf_iscomposing(opndc))
 		{
 		    // When only a composing char is given match at any
 		    // position where that composing char appears.
@@ -3818,7 +3815,7 @@ regmatch(
 						i += utf_ptr2len(rex.input + i))
 		    {
 			inpc = utf_ptr2char(rex.input + i);
-			if (!unicode_is_combining(inpc))
+			if (!utf_iscomposing(inpc))
 			{
 			    if (i > 0)
 				break;
@@ -3856,7 +3853,7 @@ regmatch(
 	    if (enc_utf8)
 	    {
 		// Skip composing characters.
-		while (unicode_is_combining(utf_ptr2char(rex.input)))
+		while (utf_iscomposing(utf_ptr2char(rex.input)))
 		    MB_CPTR_ADV(rex.input);
 	    }
 	    break;
@@ -5014,8 +5011,7 @@ bt_regexec_both(
 	if (prog->regstart == NUL
 		|| prog->regstart == c
 		|| (rex.reg_ic
-		    && (((enc_utf8 && unicode_simple_fold(prog->regstart)
-					== unicode_simple_fold(c)))
+		    && (((enc_utf8 && utf_fold(prog->regstart) == utf_fold(c)))
 			|| (c < 255 && prog->regstart < 255 &&
 			    MB_TOLOWER(prog->regstart) == MB_TOLOWER(c)))))
 	    retval = regtry(prog, col, timed_out);

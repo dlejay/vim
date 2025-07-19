@@ -5,8 +5,6 @@
  * This file is included in "regexp.c".
  */
 
-#include "unicode.h"
-
 /*
  * Logging of NFA engine.
  *
@@ -1409,7 +1407,7 @@ nfa_regatom(void)
 
 	    // When '.' is followed by a composing char ignore the dot, so that
 	    // the composing char is matched here.
-	    if (enc_utf8 && c == Magic('.') && unicode_is_combining(peekchr()))
+	    if (enc_utf8 && c == Magic('.') && utf_iscomposing(peekchr()))
 	    {
 		old_regparse = regparse;
 		c = getchr();
@@ -2119,7 +2117,7 @@ nfa_do_multibyte:
 		// plen is length of current char with composing chars
 		if (enc_utf8 && ((*mb_char2len)(c)
 			    != (plen = utfc_ptr2len(old_regparse))
-						       || unicode_is_combining(c)))
+						       || utf_iscomposing(c)))
 		{
 		    int i = 0;
 
@@ -5677,7 +5675,7 @@ find_match_text(colnr_T *startcol, int regstart, char_u *match_text)
 	if (enc_utf8 && len2 > 1 && MB_CHAR2LEN(PTR2CHAR(rex.line + col)) != len2)
 	    // because of case-folding of the previously matched text, we may need
 	    // to skip fewer bytes than mb_char2len(regstart)
-	    len2 = mb_char2len(unicode_simple_fold(regstart));
+	    len2 = mb_char2len(utf_fold(regstart));
 	for (len1 = 0; match_text[len1] != NUL; len1 += MB_CHAR2LEN(c1))
 	{
 	    c1 = PTR2CHAR(match_text + len1);
@@ -5693,7 +5691,7 @@ find_match_text(colnr_T *startcol, int regstart, char_u *match_text)
 	if (match
 		// check that no composing char follows
 		&& !(enc_utf8
-			  && unicode_is_combining(PTR2CHAR(rex.line + col + len2))))
+			  && utf_iscomposing(PTR2CHAR(rex.line + col + len2))))
 	{
 	    cleanup_subexpr();
 	    if (REG_MULTI)
@@ -5966,7 +5964,7 @@ nfa_regmatch(
 		// composing characters and rex.reg_icombine is not set, that
 		// is not really a match.
 		if (enc_utf8 && !rex.reg_icombine
-			     && rex.input != rex.line && unicode_is_combining(curc))
+			     && rex.input != rex.line && utf_iscomposing(curc))
 		    break;
 
 		nfa_match = TRUE;
@@ -6360,7 +6358,7 @@ nfa_regmatch(
 
 		sta = t->state->out;
 		len = 0;
-		if (unicode_is_combining(sta->c))
+		if (utf_iscomposing(sta->c))
 		{
 		    // Only match composing character(s), ignore base
 		    // character.  Used for ".{composing}" and "{composing}"
@@ -6472,7 +6470,7 @@ nfa_regmatch(
 
 			sta = t->state->out->out;
 			len = 0;
-			if (unicode_is_combining(sta->c))
+			if (utf_iscomposing(sta->c))
 			{
 			    // Only match composing character(s), ignore base
 			    // character.  Used for ".{composing}" and "{composing}"
@@ -6606,7 +6604,7 @@ nfa_regmatch(
 	    case NFA_ANY_COMPOSING:
 		// On a composing character skip over it.  Otherwise do
 		// nothing.  Always matches.
-		if (enc_utf8 && unicode_is_combining(curc))
+		if (enc_utf8 && utf_iscomposing(curc))
 		{
 		    add_off = clen;
 		}

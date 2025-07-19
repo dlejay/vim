@@ -11,7 +11,6 @@
  * ex_getln.c: Functions for entering and editing an Ex command line.
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 // Return value when handling keys in command-line mode.
@@ -2458,7 +2457,7 @@ getcmdline_int(
 		    do_abbr = FALSE;	    // don't do abbreviation now
 		    extra_char = NUL;
 		    // may need to remove ^ when composing char was typed
-		    if (enc_utf8 && unicode_is_combining(c) && !cmd_silent)
+		    if (enc_utf8 && utf_iscomposing(c) && !cmd_silent)
 		    {
 			draw_cmdline(ccline.cmdpos,
 						ccline.cmdlen - ccline.cmdpos);
@@ -3511,7 +3510,7 @@ draw_cmdline(int start, int len)
 		return;	// out of memory
 	}
 
-	if (unicode_is_combining(utf_ptr2char(ccline.cmdbuff + start)))
+	if (utf_iscomposing(utf_ptr2char(ccline.cmdbuff + start)))
 	{
 	    // Prepend a space to draw the leading composing char on.
 	    arshape_buf[0] = ' ';
@@ -3688,7 +3687,7 @@ put_on_cmdline(char_u *str, int len, int redraw)
 	    // backup to the character before it.  There could be two of them.
 	    i = 0;
 	    c = utf_ptr2char(ccline.cmdbuff + ccline.cmdpos);
-	    while (ccline.cmdpos > 0 && unicode_is_combining(c))
+	    while (ccline.cmdpos > 0 && utf_iscomposing(c))
 	    {
 		i = (*mb_head_off)(ccline.cmdbuff,
 				      ccline.cmdbuff + ccline.cmdpos - 1) + 1;

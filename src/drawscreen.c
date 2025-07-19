@@ -63,7 +63,6 @@
  *   update_screen() called to redraw.
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 static void win_update(win_T *wp);

@@ -8,7 +8,6 @@
  * See README.txt for an overview of the Vim source code.
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 // Structure containing all the GUI information
@@ -2558,7 +2557,7 @@ gui_outstr_nowrap(
 	{
 	    c = utf_ptr2char(s + i);
 	    cn = utf_char2cells(c);
-	    comping = unicode_is_combining(c);
+	    comping = utf_iscomposing(c);
 	    if (!comping)	// count cells from non-composing chars
 		cells += cn;
 	    if (!comping || sep_comp)

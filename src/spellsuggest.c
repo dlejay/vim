@@ -11,7 +11,6 @@
  * spellsuggest.c: functions for spelling suggestions
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 #if defined(FEAT_SPELL) || defined(PROTO)
@@ -1998,11 +1997,11 @@ suggest_trie_walk(
 				// the score from SCORE_SUBST to
 				// SCORE_SUBCOMP.
 				if (enc_utf8
-					&& unicode_is_combining(
+					&& utf_iscomposing(
 					    utf_ptr2char(tword
 						+ sp->ts_twordlen
 							   - sp->ts_tcharlen))
-					&& unicode_is_combining(
+					&& utf_iscomposing(
 					    utf_ptr2char(fword
 							+ sp->ts_fcharstart)))
 				    sp->ts_score -=
@@ -2026,7 +2025,7 @@ suggest_trie_walk(
 			    {
 				p = tword + sp->ts_twordlen - sp->ts_tcharlen;
 				c = mb_ptr2char(p);
-				if (enc_utf8 && unicode_is_combining(c))
+				if (enc_utf8 && utf_iscomposing(c))
 				{
 				    // Inserting a composing char doesn't
 				    // count that much.
@@ -2109,7 +2108,7 @@ suggest_trie_walk(
 		{
 		    c = mb_ptr2char(fword + sp->ts_fidx);
 		    stack[depth].ts_fidx += mb_ptr2len(fword + sp->ts_fidx);
-		    if (enc_utf8 && unicode_is_combining(c))
+		    if (enc_utf8 && utf_iscomposing(c))
 			stack[depth].ts_score -= SCORE_DEL - SCORE_DELCOMP;
 		    else if (c == mb_ptr2char(fword + stack[depth].ts_fidx))
 			stack[depth].ts_score -= SCORE_DEL - SCORE_DELDUP;

@@ -11,7 +11,6 @@
  * digraph.c: code for digraphs
  */
 
-#include "unicode.h"
 #include "vim.h"
 
 #if defined(FEAT_DIGRAPHS) || defined(PROTO)
@@ -1987,7 +1986,7 @@ printdigraph(digr_T *dp, result_T *previous)
     if (has_mbyte)
     {
 	// add a space to draw a composing char on
-	if (enc_utf8 && unicode_is_combining(dp->result))
+	if (enc_utf8 && utf_iscomposing(dp->result))
 	    *p++ = ' ';
 	p += (*mb_char2bytes)(dp->result, p);
     }

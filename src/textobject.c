@@ -11,7 +11,6 @@
  * textobject.c: functions for text objects
  */
 #include "vim.h"
-#include "unicode.h"
 
 static int cls(void);
 static int skip_chars(int, int);
