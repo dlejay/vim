@@ -5,68 +5,42 @@ on:
     branches: ['**']
   pull_request:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-
 jobs:
-  linux:
+  shadow-build:
     runs-on: ubuntu-24.04
-
     env:
       CC: gcc
-      GCC_VER: 14
-      TEST: test
       SRCDIR: ./src
-      LEAK_CFLAGS: -DEXITFREE
-      LOG_DIR: ${{ github.workspace }}/logs
-      TERM: xterm
-      DISPLAY: ':99'
-      DEBIAN_FRONTEND: noninteractive
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - features: normal
-            shadow: ./src/shadow
-            compiler: gcc
-            architecture: i386
+      TEST: test
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Enable i386 architecture
+      - name: Enable i386
         run: sudo dpkg --add-architecture i386
 
-      - name: Set up shadow dir
+      - name: Prepare shadow dir
         run: |
           make -C src shadow
-          echo "SRCDIR=${{ matrix.shadow }}" >> $GITHUB_ENV
-          echo "SHADOWOPT=-C ${{ matrix.shadow }}" >> $GITHUB_ENV
+          echo "SRCDIR=./src/shadow" >> $GITHUB_ENV
+          echo "SHADOWOPT=-C src/shadow" >> $GITHUB_ENV
 
       - name: Configure
         env:
-          # prevent autoconf from reusing SRCDIR
+          # prevent Autoconf from using CI’s SRCDIR
           SRCDIR: ""
         run: |
-          cd "${{ matrix.shadow }}"
-          ../../configure --with-features=${{ matrix.features }} --enable-fail-if-missing
+          cd src/shadow
+          ../../configure --with-features=normal --enable-fail-if-missing
           sed -i -f ../../ci/config.mk.sed auto/config.mk
-          sed -i -f ../../ci/config.mk.${{ matrix.compiler }}.sed auto/config.mk
-          if [[ $CC = clang ]]; then
-            sed -i -f ../../ci/config.mk.clang-12.sed auto/config.mk
-          fi
+          sed -i -f ../../ci/config.mk.gcc.sed auto/config.mk
 
       - name: Build
-        run: make ${SHADOWOPT} -j${NPROC}
+        run: make $SHADOWOPT -j$(nproc)
 
       - name: Check version
-        run: "${SRCDIR}"/vim --version
+        run: ${{ env.SRCDIR }}/vim --version
 
-      - name: Test
-        run: make ${SHADOWOPT} ${TEST}
+      - name: Run tests
+        run: make $SHADOWOPT $TEST
