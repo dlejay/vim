@@ -1062,7 +1062,7 @@ copy_text_attr(
 
     mch_memmove(ScreenLines + off, buf, (size_t)len);
     if (enc_utf8)
-	vim_memset(ScreenLinesUC + off, 0, sizeof(rune_T) * (size_t)len);
+	vim_memset(ScreenLinesUC + off, 0, sizeof(u8char_T) * (size_t)len);
     for (i = 0; i < len; ++i)
 	ScreenAttrs[off + i] = attr;
 }
@@ -2990,8 +2990,8 @@ redraw_asap(int type)
     schar_T	*screenline;	// copy from ScreenLines[]
     sattr_T	*screenattr;	// copy from ScreenAttrs[]
     int		i;
-    rune_T	*screenlineUC = NULL;	// copy from ScreenLinesUC[]
-    rune_T	*screenlineC[MAX_MCO];	// copy from ScreenLinesC[][]
+    u8char_T	*screenlineUC = NULL;	// copy from ScreenLinesUC[]
+    u8char_T	*screenlineC[MAX_MCO];	// copy from ScreenLinesC[][]
     schar_T	*screenline2 = NULL;	// copy from ScreenLines2[]
 
     redraw_later(type);
@@ -3008,12 +3008,12 @@ redraw_asap(int type)
 	ret = 2;
     if (enc_utf8)
     {
-	screenlineUC = LALLOC_MULT(rune_T, rows * cols);
+	screenlineUC = LALLOC_MULT(u8char_T, rows * cols);
 	if (screenlineUC == NULL)
 	    ret = 2;
 	for (i = 0; i < p_mco; ++i)
 	{
-	    screenlineC[i] = LALLOC_MULT(rune_T, rows * cols);
+	    screenlineC[i] = LALLOC_MULT(u8char_T, rows * cols);
 	    if (screenlineC[i] == NULL)
 		ret = 2;
 	}
@@ -3040,11 +3040,11 @@ redraw_asap(int type)
 	    {
 		mch_memmove(screenlineUC + r * cols,
 			    ScreenLinesUC + LineOffset[cmdline_row + r],
-			    (size_t)cols * sizeof(rune_T));
+			    (size_t)cols * sizeof(u8char_T));
 		for (i = 0; i < p_mco; ++i)
 		    mch_memmove(screenlineC[i] + r * cols,
 				ScreenLinesC[i] + LineOffset[cmdline_row + r],
-				(size_t)cols * sizeof(rune_T));
+				(size_t)cols * sizeof(u8char_T));
 	    }
 	    if (enc_dbcs == DBCS_JPNU)
 		mch_memmove(screenline2 + r * cols,
@@ -3072,11 +3072,11 @@ redraw_asap(int type)
 		{
 		    mch_memmove(ScreenLinesUC + off,
 				screenlineUC + r * cols,
-				(size_t)cols * sizeof(rune_T));
+				(size_t)cols * sizeof(u8char_T));
 		    for (i = 0; i < p_mco; ++i)
 			mch_memmove(ScreenLinesC[i] + off,
 				    screenlineC[i] + r * cols,
-				    (size_t)cols * sizeof(rune_T));
+				    (size_t)cols * sizeof(u8char_T));
 		}
 		if (enc_dbcs == DBCS_JPNU)
 		    mch_memmove(ScreenLines2 + off,

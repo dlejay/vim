@@ -54,9 +54,8 @@ EXTERN char_u	*LineWraps INIT(= NULL);	// line wraps to next line
  * ScreenLinesC[0][off] is only to be used when ScreenLinesUC[off] != 0.
  * Note: These three are only allocated when enc_utf8 is set!
  */
-#include "unicode.h"
-EXTERN rune_T	*ScreenLinesUC INIT(= NULL);	// decoded UTF-8 characters
-EXTERN rune_T	*ScreenLinesC[MAX_MCO];		// composing characters
+EXTERN u8char_T	*ScreenLinesUC INIT(= NULL);	// decoded UTF-8 characters
+EXTERN u8char_T	*ScreenLinesC[MAX_MCO];		// composing characters
 EXTERN int	Screen_mco INIT(= 0);		// value of p_mco used when
 						// allocating ScreenLinesC[]
 
