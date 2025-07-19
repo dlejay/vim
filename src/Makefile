@@ -3001,6 +3001,8 @@ shadow:	runtime pixmaps
 	mkdir $(SHADOWDIR)/auto/wayland
 	cd $(SHADOWDIR)/auto/wayland; ln -s ../../../auto/wayland/* .
 	cd $(SHADOWDIR)/auto; ln -s ../../auto/configure .
+	mkdir $(SHADOWDIR)/tables
+	cd $(SHADOWDIR)/tables; ln -s ../../tables/*.inc .
 	$(MKDIR_P) $(SHADOWDIR)/po
 	cd $(SHADOWDIR)/po; ln -s ../../po/*.po ../../po/*.mak ../../po/*.vim ../../po/*.in ../../po/Makefile ../../po/*.c .
 	cd $(SHADOWDIR); rm -f auto/link.sed
