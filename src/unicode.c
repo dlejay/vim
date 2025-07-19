@@ -16,94 +16,10 @@
  * Type definitions for data tables
  *--------------------------------------------------------------------*/
 
-/* Interval of codepoints [first..last] */
-struct interval {
-    rune_T first;
-    rune_T last;
-};
-
-/* Case-mapping interval: [first..last] with step and offset */
-struct convert_interval {
-    rune_T first;
-    rune_T last;
-    short  step;
-    rune_T offset;
-};
-
-/* East Asian Width interval with property */
-struct eaw_interval {
-    rune_T first;
-    rune_T last;
-    unicode_east_asian_width_T eaw;
-};
-
-/* Word-break interval with property */
-struct wb_interval {
-    rune_T first;
-    rune_T last;
-    unicode_word_break_T wb;
-};
-
-/*--------------------------------------------------------------------
- * Data table definitions
- *--------------------------------------------------------------------*/
-
-static const struct interval combining[] = {
-#include "tables/unicode_combining.inc"
-};
-
-static const struct convert_interval simple_toupper[] = {
-#include "tables/unicode_simple_toupper.inc"
-};
-
-static const struct convert_interval simple_tolower[] = {
-#include "tables/unicode_simple_tolower.inc"
-};
-
-static const struct convert_interval simple_fold[] = {
-#include "tables/unicode_simple_fold.inc"
-};
-
-static const struct eaw_interval east_asian_width[] = {
-#include "tables/unicode_east_asian_width.inc"
-};
-
-static const struct wb_interval word_break[] = {
-#include "tables/unicode_word_break.inc"
-};
-
-/*--------------------------------------------------------------------
- * Generic comparator for binary search
- *--------------------------------------------------------------------*/
-
-/* Compare a codepoint 'r' against an interval [first..last] */
-static int
-range_cmp(const void *key, const void *elem)
-{
-    rune_T r = *(const rune_T *)key;
-    const struct interval *iv = elem;
-
-    if (r < iv->first)
-        return -1;
-    if (r > iv->last)
-        return +1;
-    return 0;
-}
 
 /*--------------------------------------------------------------------
  * Core Specification
  *--------------------------------------------------------------------*/
-
-/* Internal implementation: search combining table */
-static bool
-in_table_impl(rune_T r, const struct interval *table, size_t count)
-{
-    return false;
-}
-
-/* Macro that hides the count argument for in_table */
-#define in_table(r_, table_) \
-    in_table_impl((r_), (table_), sizeof(table_) / sizeof((table_)[0]))
 
 /* Test for combining character property */
 bool
@@ -116,18 +32,6 @@ unicode_is_combining(rune_T r)
  * Default Case Algorithms
  *--------------------------------------------------------------------*/
 
-/* Internal implementation: lookup and apply offset if valid */
-static rune_T
-convert_impl(rune_T r,
-             const struct convert_interval table[],
-             size_t count)
-{
-    return r;
-}
-
-/* Macro that hides the count argument for convert */
-#define convert(r_, table_) \
-    convert_impl((r_), (table_), sizeof(table_) / sizeof((table_)[0]))
 
 /* Simple uppercase: ASCII fast path + table lookup */
 rune_T
