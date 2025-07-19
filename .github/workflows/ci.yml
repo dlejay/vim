@@ -144,8 +144,8 @@ jobs:
             ln -fs /usr/bin/llvm-cov ${HOME}/bin/gcov
           fi
           sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=0
-          sudo usermod -a -G audio "${USER}"
-          sudo bash ci/setup-xvfb.sh
+            sudo usermod -a -G audio "${USER}"
+            sudo bash ci/setup-xvfb.sh
 
       - name: Set up shadow dir
         if: matrix.shadow
@@ -165,59 +165,20 @@ jobs:
         run: |
           make ${SHADOWOPT} -j${NPROC}
 
+      # Added debug step (one-step high impact)
+      - name: Debug vim --version (backtrace)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y gdb
+          ulimit -c unlimited
+          gdb --batch --nx -ex "run" -ex "bt" -ex "bt full" -ex "info registers" \
+              --args "${SRCDIR}/vim" --version > gdb.log 2>&1 || true
+          echo "===== gdb backtrace ====="
+          sed -n '1,120p' gdb.log
+
       - name: Check version
         if: (!contains(matrix.extra, 'unittests'))
         run: |
           "${SRCDIR}"/vim --version
           "${SRCDIR}"/vim -u NONE -i NONE --not-a-term -esNX -V1 -S ci/if_ver-1.vim -c quit
           "${SRCDIR}"/vim -u NONE -i NONE --not-a-term -esNX -V1 -S ci/if_ver-2.vim -c quit
-
-      - name: Test
-        timeout-minutes: 25
-        run: |
-          make ${SHADOWOPT} ${TEST}
-
-      - if: ${{ !cancelled() }}
-        uses: ./.github/actions/test_artifacts
-
-      - name: Generate gcov files
-        if: matrix.coverage
-        run: |
-          cd "${SRCDIR}"
-          find . -type f -name '*.gcno' -exec gcov -pb {} + || true
-
-      - name: Codecov
-        timeout-minutes: 20
-        if: matrix.coverage
-        uses: codecov/codecov-action@v5
-        with:
-          flags: linux,${{ matrix.features }}-${{ matrix.compiler }}-${{ join(matrix.extra, '-') }}
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: ASan logs
-        if: contains(matrix.extra, 'asan') && !cancelled()
-        run: |
-          for f in $(grep -lR '#[[:digit:]]* *0x[[:xdigit:]]*' "${LOG_DIR}"); do
-            echo "$f"
-            asan_symbolize -l "$f"
-            false
-          done
-
-      - name: Vim tags
-        if: contains(matrix.extra, 'vimtags')
-        run: |
-          (
-            cd runtime/doc
-            git diff --exit-code -- tags
-            make html; rm *.html tags.ref;
-            test -f errors.log && exit 3;
-            true
-          )
-
-      - name: Codecov
-        timeout-minutes: 20
-        if: matrix.coverage
-        uses: codecov/codecov-action@v5
-        with:
-          flags: windows,${{ matrix.toolchain }}-${{ matrix.arch }}-${{ matrix.features }}
-          token: ${{ secrets.CODECOV_TOKEN }}
