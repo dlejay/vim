@@ -5,42 +5,219 @@ on:
     branches: ['**']
   pull_request:
 
+# Cancels all previous workflow runs for pull requests that have not completed.
+concurrency:
+  # The concurrency group contains the workflow name and the branch name for
+  # pull requests or the commit hash for any other events.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
-  shadow-build:
-    runs-on: ubuntu-24.04
+  linux:
+    runs-on: ${{ matrix.architecture == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+
     env:
-      CC: gcc
-      SRCDIR: ./src
+      CC: ${{ matrix.compiler }}
+      GCC_VER: 14
+      CLANG_VER: 20
       TEST: test
+      SRCDIR: ./src
+      LEAK_CFLAGS: -DEXITFREE
+      LOG_DIR: ${{ github.workspace }}/logs
+      TERM: xterm
+      DISPLAY: ':99'
+      DEBIAN_FRONTEND: noninteractive
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - features: normal
+            shadow: ./src/shadow
+            compiler: gcc
+            architecture: i386
 
     steps:
-      - name: Checkout
+      - name: Checkout repository from github
         uses: actions/checkout@v4
 
-      - name: Enable i386
-        run: sudo dpkg --add-architecture i386
+      - name: Check Filelist (for packaging)
+        run: |
+          # If any files in the repository are not listed in Filelist this will
+          # exit with an error code and list the missing entries.
+          make -f ci/unlisted.make
 
-      - name: Prepare shadow dir
+      - name: Check hlgroups (are any new hlgroups added, but not handled in highlight.c)
+        run: |
+          # If any highlight groups have been documented, but not handled in
+          # highlight.c, nor listed as 'intentionally left out' in hlgroups.ignore,
+          # exit with an error code and list the missing entries.
+          make -C ci -f hlgroups.make
+
+      - run: sudo dpkg --add-architecture i386
+        if: matrix.architecture == 'i386'
+
+      - name: Uninstall snap
+        run: |
+          sudo bash ci/remove_snap.sh
+
+      - name: Enable debug packages
+        run: |
+          # Some of the ASAN suppressions are in libraries linked with dlopen
+          # and symbolization of them requires these debug packages.
+          sudo apt install ubuntu-dbgsym-keyring
+          sudo cp ci/ddebs.list /etc/apt/sources.list.d/ddebs.list
+          sudo cp ci/pinned-pkgs /etc/apt/preferences.d/pinned-pkgs
+
+      - name: Install packages
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          PKGS=( \
+            gettext \
+            x11-utils \
+            labwc \
+            wl-clipboard \
+            wayland-utils \
+            libgtk-3-dev:${{ matrix.architecture }} \
+            libgtk-3-bin:${{ matrix.architecture }} \
+            desktop-file-utils \
+            libc6-dbgsym:${{ matrix.architecture }} \
+            libtool-bin \
+            libncurses-dev:${{ matrix.architecture }} \
+            libxt-dev:${{ matrix.architecture }} \
+            libegl-mesa0:${{ matrix.architecture }} \
+            libegl1:${{ matrix.architecture }} \
+            libegl1-mesa-dev:${{ matrix.architecture }} \
+            libepoxy-dev:${{ matrix.architecture }} \
+            libwayland-egl1:${{ matrix.architecture }} \
+            libwayland-client0:${{ matrix.architecture }} \
+            libwayland-cursor0:${{ matrix.architecture }} \
+            locales-all \
+            software-properties-common \
+          )
+          sudo apt-get update && sudo apt-get upgrade -y --allow-downgrades && sudo apt-get install -y --allow-downgrades "${PKGS[@]}"
+
+      - name: Install gcc-${{ env.GCC_VER }}
+        if: matrix.compiler == 'gcc'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y gcc-${{ env.GCC_VER }}:${{ matrix.architecture }}
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ env.GCC_VER }} 100
+          sudo update-alternatives --set gcc /usr/bin/gcc-${{ env.GCC_VER }}
+
+      - name: Install clang-${{ env.CLANG_VER }}
+        if: matrix.compiler == 'clang'
+        run: |
+          . /etc/lsb-release
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/llvm-archive-keyring.gpg > /dev/null
+          echo "Types: deb
+          URIs: https://apt.llvm.org/${DISTRIB_CODENAME}/
+          Suites: llvm-toolchain-${DISTRIB_CODENAME}-${{ env.CLANG_VER }}
+          Components: main
+          Signed-By: /usr/share/keyrings/llvm-archive-keyring.gpg" | sudo tee /etc/apt/sources.list.d/llvm-toolchain.sources > /dev/null
+          sudo apt-get update -y
+          sudo apt-get install -y clang-${{ env.CLANG_VER }} llvm-${{ env.CLANG_VER }}
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ env.CLANG_VER }} 100
+          sudo update-alternatives --set clang /usr/bin/clang-${{ env.CLANG_VER }}
+          sudo update-alternatives --install /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-${{ env.CLANG_VER }} 100
+          sudo update-alternatives --install /usr/bin/asan_symbolize asan_symbolize /usr/bin/asan_symbolize-${{ env.CLANG_VER }} 100
+
+      - name: Set up environment
+        run: |
+          mkdir -p "${LOG_DIR}"
+          mkdir -p "${HOME}/bin"
+          echo "${HOME}/bin" >> $GITHUB_PATH
+          (
+          echo "LINUX_VERSION=$(uname -r)"
+          echo "NPROC=$(getconf _NPROCESSORS_ONLN)"
+          echo "TMPDIR=$(mktemp -d -p /tmp)"
+          echo "TEST=${{ matrix.features == 'normal' && 'test' || 'test' }}"
+          echo "CONFOPT="
+          ) >> $GITHUB_ENV
+
+      - name: Set up system
+        run: |
+          if [[ ${CC} = clang ]]; then
+            ln -fs /usr/bin/llvm-cov ${HOME}/bin/gcov
+          fi
+          sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=0
+          sudo usermod -a -G audio "${USER}"
+          sudo bash ci/setup-xvfb.sh
+
+      - name: Set up shadow dir
+        if: matrix.shadow
         run: |
           make -C src shadow
-          echo "SRCDIR=./src/shadow" >> $GITHUB_ENV
-          echo "SHADOWOPT=-C src/shadow" >> $GITHUB_ENV
+          echo "SRCDIR=${{ matrix.shadow }}" >> $GITHUB_ENV
+          echo "SHADOWOPT=-C ${{ matrix.shadow }}" >> $GITHUB_ENV
 
       - name: Configure
-        env:
-          # prevent Autoconf from using CI’s SRCDIR
-          SRCDIR: ""
         run: |
-          cd src/shadow
-          ../../configure --with-features=normal --enable-fail-if-missing
-          sed -i -f ../../ci/config.mk.sed auto/config.mk
-          sed -i -f ../../ci/config.mk.gcc.sed auto/config.mk
+          ./configure --with-features=${{ matrix.features }} ${CONFOPT} --enable-fail-if-missing
+          sed -i -f ci/config.mk.sed ${SRCDIR}/auto/config.mk
+          sed -i -f ci/config.mk.${CC}.sed ${SRCDIR}/auto/config.mk
 
       - name: Build
-        run: make $SHADOWOPT -j$(nproc)
+        if: (!contains(matrix.extra, 'unittests'))
+        run: |
+          make ${SHADOWOPT} -j${NPROC}
 
       - name: Check version
-        run: ${{ env.SRCDIR }}/vim --version
+        if: (!contains(matrix.extra, 'unittests'))
+        run: |
+          "${SRCDIR}"/vim --version
+          "${SRCDIR}"/vim -u NONE -i NONE --not-a-term -esNX -V1 -S ci/if_ver-1.vim -c quit
+          "${SRCDIR}"/vim -u NONE -i NONE --not-a-term -esNX -V1 -S ci/if_ver-2.vim -c quit
 
-      - name: Run tests
-        run: make $SHADOWOPT $TEST
+      - name: Test
+        timeout-minutes: 25
+        run: |
+          make ${SHADOWOPT} ${TEST}
+
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/test_artifacts
+
+      - name: Generate gcov files
+        if: matrix.coverage
+        run: |
+          cd "${SRCDIR}"
+          find . -type f -name '*.gcno' -exec gcov -pb {} + || true
+
+      - name: Codecov
+        timeout-minutes: 20
+        if: matrix.coverage
+        uses: codecov/codecov-action@v5
+        with:
+          flags: linux,${{ matrix.features }}-${{ matrix.compiler }}-${{ join(matrix.extra, '-') }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: ASan logs
+        if: contains(matrix.extra, 'asan') && !cancelled()
+        run: |
+          for f in $(grep -lR '#[[:digit:]]* *0x[[:xdigit:]]*' "${LOG_DIR}"); do
+            echo "$f"
+            asan_symbolize -l "$f"
+            false
+          done
+
+      - name: Vim tags
+        if: contains(matrix.extra, 'vimtags')
+        run: |
+          (
+            cd runtime/doc
+            git diff --exit-code -- tags
+            make html; rm *.html tags.ref;
+            test -f errors.log && exit 3;
+            true
+          )
+
+      - name: Codecov
+        timeout-minutes: 20
+        if: matrix.coverage
+        uses: codecov/codecov-action@v5
+        with:
+          flags: windows,${{ matrix.toolchain }}-${{ matrix.arch }}-${{ matrix.features }}
+          token: ${{ secrets.CODECOV_TOKEN }}
