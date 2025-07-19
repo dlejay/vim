@@ -5,15 +5,12 @@ on:
     branches: ['**']
   pull_request:
 
-# Cancels all previous workflow runs for pull requests that have not completed.
 concurrency:
-  # The concurrency group contains the workflow name and the branch name for
-  # pull requests or the commit hash for any other events.
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
   cancel-in-progress: true
 
 permissions:
-  contents: read # to fetch code (actions/checkout)
+  contents: read
 
 jobs:
   linux:
@@ -41,26 +38,24 @@ jobs:
             architecture: i386
 
     steps:
-      - name: Checkout repository from github
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check Filelist (for packaging)
-        run: |
-          make -f ci/unlisted.make
+      - name: Check Filelist
+        run: make -f ci/unlisted.make
 
       - name: Check hlgroups
-        run: |
-          make -C ci -f hlgroups.make
+        run: make -C ci -f hlgroups.make
 
-      - run: sudo dpkg --add-architecture i386
-        if: matrix.architecture == 'i386'
+      - if: matrix.architecture == 'i386'
+        run: sudo dpkg --add-architecture i386
 
       - name: Uninstall snap
         run: sudo bash ci/remove_snap.sh
 
       - name: Enable debug packages
         run: |
-          sudo apt install ubuntu-dbgsym-keyring
+          sudo apt install -y ubuntu-dbgsym-keyring
           sudo cp ci/ddebs.list /etc/apt/sources.list.d/ddebs.list
           sudo cp ci/pinned-pkgs /etc/apt/preferences.d/pinned-pkgs
 
@@ -75,13 +70,13 @@ jobs:
                 libegl1-mesa-dev:${{ matrix.architecture }} libepoxy-dev:${{ matrix.architecture }} \
                 libwayland-egl1:${{ matrix.architecture }} libwayland-client0:${{ matrix.architecture }} \
                 libwayland-cursor0:${{ matrix.architecture }} locales-all software-properties-common)
-          sudo apt-get update && sudo apt-get upgrade -y --allow-downgrades
+          sudo apt-get update -y
+          sudo apt-get upgrade -y --allow-downgrades
           sudo apt-get install -y --allow-downgrades "${PKGS[@]}"
 
       - name: Install gcc-${{ env.GCC_VER }}
         if: matrix.compiler == 'gcc'
         run: |
-          sudo apt-get update -y
           sudo apt-get install -y gcc-${{ env.GCC_VER }}:${{ matrix.architecture }}
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ env.GCC_VER }} 100
           sudo update-alternatives --set gcc /usr/bin/gcc-${{ env.GCC_VER }}
@@ -89,27 +84,27 @@ jobs:
       - name: Set up environment
         run: |
           mkdir -p "${LOG_DIR}" "${HOME}/bin"
-          echo "${HOME}/bin" >> $GITHUB_PATH
+          echo "${HOME}/bin" >> "$GITHUB_PATH"
           {
             echo "LINUX_VERSION=$(uname -r)"
             echo "NPROC=$(getconf _NPROCESSORS_ONLN)"
             echo "TMPDIR=$(mktemp -d -p /tmp)"
             echo "TEST=test"
             echo "CONFOPT="
-          } >> $GITHUB_ENV
+          } >> "$GITHUB_ENV"
 
       - name: Set up system
         run: |
           sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=0
-          sudo usermod -a -G audio "${USER}"
+          sudo usermod -a -G audio "$USER"
           sudo bash ci/setup-xvfb.sh
 
-      - name: Set up shadow dir
+      - name: Create shadow dir
         if: matrix.shadow
         run: |
           make -C src shadow
-          echo "SRCDIR=${{ matrix.shadow }}" >> $GITHUB_ENV
-          echo "SHADOWOPT=-C ${{ matrix.shadow }}" >> $GITHUB_ENV
+          echo "SRCDIR=${{ matrix.shadow }}" >> "$GITHUB_ENV"
+          echo "SHADOWOPT=-C ${{ matrix.shadow }}" >> "$GITHUB_ENV"
 
       - name: Configure
         run: |
@@ -117,10 +112,16 @@ jobs:
           sed -i -f ci/config.mk.sed ${SRCDIR}/auto/config.mk
           sed -i -f ci/config.mk.${CC}.sed ${SRCDIR}/auto/config.mk
 
+      - name: Rebuild shadow clean (force fresh objects)
+        if: matrix.shadow
+        run: |
+          rm -rf src/shadow
+          make -C src shadow
+          echo "SRCDIR=${{ matrix.shadow }}" >> "$GITHUB_ENV"
+
       - name: Build
         run: make ${SHADOWOPT} -j${NPROC}
 
-      # Replaces the former 'Check version' step with a debug backtrace.
       - name: Debug vim --version (gdb backtrace)
         continue-on-error: true
         run: |
@@ -130,20 +131,19 @@ jobs:
           set -x
           file "${SRCDIR}/vim" || true
           readelf -h "${SRCDIR}/vim" | egrep 'Class|Machine|Entry' || true
-            gdb --batch --nx \
-              -ex "run" \
-              -ex "bt" \
-              -ex "bt full" \
-              -ex "info registers" \
-              -ex "info files" \
-              --args "${SRCDIR}/vim" --version > gdb.log 2>&1 || true
+          gdb --batch --nx \
+            -ex "run" \
+            -ex "bt" \
+            -ex "bt full" \
+            -ex "info registers" \
+            -ex "info files" \
+            --args "${SRCDIR}/vim" --version > gdb.log 2>&1 || true
           echo "===== gdb backtrace (first 120 lines) ====="
           sed -n '1,120p' gdb.log
           corefile=$(ls -t core* 2>/dev/null | head -1 || true)
           if [ -n "$corefile" ]; then
             echo "Core file: $corefile"
-            gdb --batch -c "$corefile" "${SRCDIR}/vim" \
-              -ex "bt" -ex "bt full" -ex "info registers" > core_bt.log 2>&1 || true
+            gdb --batch -c "$corefile" "${SRCDIR}/vim" -ex "bt" -ex "bt full" -ex "info registers" > core_bt.log 2>&1 || true
             sed -n '1,80p' core_bt.log
           fi
 
